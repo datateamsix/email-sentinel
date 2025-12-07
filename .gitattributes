@@ -1,0 +1,17 @@
+# Auto detect text files and normalize to LF for Go source
+* text=auto
+*.go text eol=lf
+*.sh text eol=lf
+*.yml text
+*.yaml text
+*.md text
+
+# Do not include build/artifact archives in exported archives
+/dist/** export-ignore
+/archive/** export-ignore
+
+# Treat executables and archives as binary
+*.exe binary
+*.dll binary
+*.so binary
+*.zip binary

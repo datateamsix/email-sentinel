@@ -1,0 +1,38 @@
+# Build
+go build -o email-sentinel.exe .
+
+# Run init
+./email-sentinel.exe init
+```
+
+You should see:
+1. It finds your `credentials.json`
+2. Prints a Google OAuth URL
+3. You open that URL, authorize, copy the code
+4. Paste the code back
+5. Token is saved to `%APPDATA%\email-sentinel\token.json`
+
+---
+
+## Expected Output
+```
+🚀 Initializing email-sentinel...
+✓ Found credentials: credentials.json
+✓ Credentials loaded
+
+🔐 Gmail Authorization Required
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Open this URL in your browser:
+
+https://accounts.google.com/o/oauth2/auth?client_id=...
+
+2. Authorize the application
+3. Copy the authorization code and paste it below
+
+Enter authorization code: 4/0AX4XfWj...
+
+✓ Authentication successful
+✓ Token saved to: C:\Users\Michael\AppData\Roaming\email-sentinel\token.json
+
+✅ Initialization complete!

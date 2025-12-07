@@ -1,0 +1,77 @@
+# Email Sentinel - Priority Rules Configuration
+#
+# This file controls which emails are marked as high priority (1) vs normal (0).
+# High priority emails can be highlighted differently in notifications.
+#
+# The rules file will be automatically created at:
+#   Windows: %APPDATA%\email-sentinel\rules.yaml
+#   macOS:   ~/Library/Application Support/email-sentinel/rules.yaml
+#   Linux:   ~/.config/email-sentinel/rules.yaml
+
+priority_rules:
+  # Urgent Keywords - emails containing these words are marked as priority
+  # Searches in: subject, snippet, and body (case-insensitive)
+  urgent_keywords:
+    - urgent
+    - asap
+    - action required
+    - issue
+    - critical
+    - deadline
+    - invoice
+    - payment
+    - eod
+    - today
+    - immediate
+    - emergency
+    - important
+    - please review
+    - needs attention
+
+  # VIP Senders - specific email addresses that are always priority
+  # Use full email addresses for exact matching
+  vip_senders:
+    - boss@company.com
+    - ceo@company.com
+    - client@important-client.com
+    # Add your important contacts here
+
+  # VIP Domains - entire domains that are always priority
+  # Any email from these domains will be marked as urgent
+  vip_domains:
+    - criticalvendor.com
+    - partner.io
+    - importantclient.com
+    # Add important partner/client domains here
+
+# Notification Settings (Optional - Future Features)
+notification_settings:
+  # Quiet Hours - suppress notifications during these times
+  # Format: "HH:MM" in 24-hour format
+  # Leave empty to disable
+  quiet_hours_start: ""    # e.g., "22:00" for 10 PM
+  quiet_hours_end: ""      # e.g., "08:00" for 8 AM
+
+  # Weekend Mode - how to handle notifications on Sat/Sun
+  # Options: "normal", "quiet", "disabled"
+  #   normal   - send all notifications as usual
+  #   quiet    - only send priority 1 notifications
+  #   disabled - no notifications on weekends
+  weekend_mode: normal
+
+# Examples:
+#
+# Example 1: Mark all emails from your manager as urgent
+# vip_senders:
+#   - manager@company.com
+#
+# Example 2: Mark all emails from a specific client domain as urgent
+# vip_domains:
+#   - importantclient.com
+#
+# Example 3: Add custom urgent keywords for your industry
+# urgent_keywords:
+#   - production down
+#   - outage
+#   - incident
+#   - security alert

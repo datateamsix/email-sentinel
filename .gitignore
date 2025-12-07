@@ -1,0 +1,51 @@
+# Secrets - NEVER commit these
+credentials.json
+token.json
+
+# Build outputs
+/email-sentinel
+/email-sentinel.exe
+/dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Editor/IDE files
+.vscode/*
+.history/
+.cache/
+
+# Claude/AI local state
+.claude/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+*.pdb
+
+# Go build outputs
+/bin/
+/pkg/
+/build/
+*.test
+*.out
+
+# Dependency directories
+/vendor/
+
+# Environment / secrets
+.env
+.env.*
+.secrets
+
+# Logs and coverage
+*.log
+coverage.out

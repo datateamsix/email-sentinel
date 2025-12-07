@@ -832,18 +832,14 @@ email-sentinel/
 ```
 
 ### Central Email Warehousing 
-Outlook  ──► Source Filters ──┐
-Yahoo    ──► Source Filters ──┤
-Proton   ──► Source Filters ──┤  ┌──────────────┐
-Work     ──► Source Filters ──┤  │  Warehouse   │
-Gmail    ──► Source Filters ──┘  │ Gmail Inbox  │
-                                 └─────┬────────┘
-                                       │
-                               Central Filters
-                                       │
-                                 Email Sentinel
-                             Notifications + History
 
+Monitor multiple email accounts by forwarding all emails to a single central Gmail inbox:
+
+![Central Email Warehousing Architecture](images/central-email-warehousing.png)
+
+This diagram shows how emails from multiple accounts (Outlook, Yahoo, Proton, Work Email, Personal Gmail) are forwarded to a central Gmail collector inbox, which Email Sentinel monitors and sends notifications.
+
+For detailed setup instructions, see **[Central Email Setup](docs/central_email_setup.md)**.
 
 ### Data Flow
 

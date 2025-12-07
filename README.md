@@ -831,6 +831,20 @@ email-sentinel/
 └── .gitignore
 ```
 
+### Central Email Warehousing 
+Outlook  ──► Source Filters ──┐
+Yahoo    ──► Source Filters ──┤
+Proton   ──► Source Filters ──┤  ┌──────────────┐
+Work     ──► Source Filters ──┤  │  Warehouse   │
+Gmail    ──► Source Filters ──┘  │ Gmail Inbox  │
+                                 └─────┬────────┘
+                                       │
+                               Central Filters
+                                       │
+                                 Email Sentinel
+                             Notifications + History
+
+
 ### Data Flow
 
 ```

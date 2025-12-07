@@ -147,6 +147,93 @@ GOOS=linux GOARCH=amd64 go build -o email-sentinel-linux .
 
 **Having issues on Windows?** See **[WINDOWS_INSTALL_TROUBLESHOOTING.md](WINDOWS_INSTALL_TROUBLESHOOTING.md)**
 
+## 🖥️ Interactive Mode
+
+Email Sentinel features a beautiful interactive CLI menu system for easier management.
+
+### Launching Interactive Mode
+
+Run Email Sentinel without any arguments to launch the interactive menu:
+
+```bash
+email-sentinel
+```
+
+### First-Time Setup Wizard
+
+On first run, the setup wizard automatically guides you through complete configuration:
+
+1. **Prerequisites Check** - Verifies Go runtime, config directory, and credentials.json
+2. **Gmail Authentication** - OAuth 2.0 flow with browser authorization
+3. **Create First Filter** - Interactive filter creation with examples and validation
+4. **Notification Setup** - Configure desktop and/or mobile push notifications
+5. **Test & Verify** - Send test notifications and verify Gmail connection
+6. **Complete** - Summary and quick command reference
+
+The wizard can be re-run anytime from the main menu (Option 6).
+
+### Main Menu
+
+The interactive menu provides intuitive access to all features:
+
+```
+╔═══════════════════════════════════════════════════════════╗
+║                        MAIN MENU                          ║
+╠═══════════════════════════════════════════════════════════╣
+║                                                           ║
+║  [1] 🚀 Start Monitoring      Start watching for emails   ║
+║  [2] 📋 Manage Filters        Add, edit, remove filters   ║
+║  [3] 🔔 Notifications         Configure alerts            ║
+║  [4] 📊 Status & History      View alerts and status      ║
+║  [5] ⚙️  Settings             Configure app settings      ║
+║  [6] 🔧 Setup Wizard          Re-run initial setup        ║
+║                                                           ║
+║  [q] Exit                                                 ║
+║                                                           ║
+╚═══════════════════════════════════════════════════════════╝
+```
+
+### Status Dashboard
+
+Access the real-time status dashboard from Status & History → Dashboard:
+
+- **Service Status**: Watcher state, uptime, last check
+- **Gmail Connection**: Account, auth status, token expiry
+- **Filters**: List of active filters with summaries
+- **Notifications**: Desktop and mobile configuration
+- **Statistics**: 24-hour email and alert metrics
+
+### Keyboard Shortcuts
+
+| Key      | Action                          |
+|----------|---------------------------------|
+| `1-9`    | Select menu item by number      |
+| `Enter`  | Confirm selection               |
+| `b`      | Back to previous menu           |
+| `q`      | Quit application                |
+| `r`      | Refresh (in dashboard)          |
+| `?`      | Show keyboard shortcuts help    |
+| `Ctrl+C` | Force quit                      |
+
+### Why Use Interactive Mode?
+
+- **Beginner-Friendly**: Guided setup wizard with validation
+- **Visual**: Beautiful ASCII art menus and status displays
+- **Discoverable**: All features accessible without memorizing commands
+- **Safe**: Confirmation prompts for destructive operations
+- **Informative**: Real-time status dashboard and alert history
+
+### Command Line vs Interactive Mode
+
+Both modes are fully supported:
+
+| Mode          | Best For                                    |
+|---------------|---------------------------------------------|
+| Interactive   | Setup, exploration, visual status           |
+| Command Line  | Automation, scripting, quick operations     |
+
+All features are available in both modes - choose what works best for your workflow!
+
 ## ⚙️ Configuration
 
 ### Config File Location

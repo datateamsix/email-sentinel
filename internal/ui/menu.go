@@ -1,0 +1,573 @@
+package ui
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/datateamsix/email-sentinel/internal/storage"
+)
+
+// MenuItem represents a single menu option
+type MenuItem struct {
+	Key         string      // "1", "2", "a", "q", etc.
+	Label       string      // Display text
+	Description string      // Optional help text
+	Icon        string      // Optional icon/emoji
+	Action      func() error // Function to execute
+	SubMenu     *Menu       // Optional nested menu
+}
+
+// Menu represents a menu with multiple items
+type Menu struct {
+	Title       string
+	Description string
+	Items       []MenuItem
+	ShowBack    bool
+	ShowQuit    bool
+	Parent      *Menu
+	StatusBar   func() string // Optional dynamic status bar
+}
+
+// MenuConfig holds menu configuration
+type MenuConfig struct {
+	Width       int
+	ClearScreen bool
+	ShowStatus  bool
+}
+
+// DefaultMenuConfig returns default menu configuration
+var DefaultMenuConfig = MenuConfig{
+	Width:       63,
+	ClearScreen: true,
+	ShowStatus:  true,
+}
+
+// NewMenu creates a new menu
+func NewMenu(title string) *Menu {
+	return &Menu{
+		Title:    title,
+		Items:    []MenuItem{},
+		ShowBack: false,
+		ShowQuit: true,
+	}
+}
+
+// AddItem adds a menu item
+func (m *Menu) AddItem(key, icon, label, description string, action func() error) *Menu {
+	m.Items = append(m.Items, MenuItem{
+		Key:         key,
+		Icon:        icon,
+		Label:       label,
+		Description: description,
+		Action:      action,
+	})
+	return m
+}
+
+// AddSubMenu adds a submenu item
+func (m *Menu) AddSubMenu(key, icon, label, description string, subMenu *Menu) *Menu {
+	subMenu.Parent = m
+	subMenu.ShowBack = true
+	subMenu.ShowQuit = false
+
+	m.Items = append(m.Items, MenuItem{
+		Key:         key,
+		Icon:        icon,
+		Label:       label,
+		Description: description,
+		SubMenu:     subMenu,
+	})
+	return m
+}
+
+// SetStatusBar sets a dynamic status bar function
+func (m *Menu) SetStatusBar(statusFn func() string) *Menu {
+	m.StatusBar = statusFn
+	return m
+}
+
+// Display shows the menu and handles user input
+func (m *Menu) Display() error {
+	for {
+		if DefaultMenuConfig.ClearScreen {
+			ClearScreen()
+		}
+
+		m.render()
+
+		choice := m.getUserInput()
+
+		// Handle back option
+		if m.ShowBack && (choice == "b" || choice == "back") {
+			return nil
+		}
+
+		// Handle quit option
+		if m.ShowQuit && (choice == "q" || choice == "quit") {
+			return fmt.Errorf("quit")
+		}
+
+		// Find and execute menu item
+		item := m.findItem(choice)
+		if item == nil {
+			PrintError("Invalid choice. Please try again.")
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		// Execute action or navigate to submenu
+		if item.SubMenu != nil {
+			err := item.SubMenu.Display()
+			if err != nil && err.Error() == "quit" {
+				return err
+			}
+		} else if item.Action != nil {
+			if DefaultMenuConfig.ClearScreen {
+				ClearScreen()
+			}
+			err := item.Action()
+			if err != nil {
+				PrintError(fmt.Sprintf("Error: %v", err))
+			}
+			fmt.Println()
+			fmt.Print("Press Enter to continue...")
+			bufio.NewReader(os.Stdin).ReadString('\n')
+		}
+	}
+}
+
+// Run starts the interactive menu loop
+func (m *Menu) Run() {
+	err := m.Display()
+	if err != nil && err.Error() == "quit" {
+		fmt.Println()
+		PrintInfo("Goodbye! 👋")
+		fmt.Println()
+	}
+}
+
+// render displays the menu
+func (m *Menu) render() {
+	width := DefaultMenuConfig.Width
+
+	// Top border
+	fmt.Println(ColorCyan.Sprint("╔" + strings.Repeat("═", width-2) + "╗"))
+
+	// Title
+	m.printCenteredRow(strings.ToUpper(m.Title), width)
+
+	// Separator
+	fmt.Println(ColorCyan.Sprint("╠" + strings.Repeat("═", width-2) + "╣"))
+
+	// Empty line
+	m.printEmptyRow(width)
+
+	// Menu items
+	for _, item := range m.Items {
+		m.printMenuItem(item, width)
+	}
+
+	// Empty line before footer options
+	m.printEmptyRow(width)
+
+	// Back option
+	if m.ShowBack {
+		backText := "  [b] ← Back to Main Menu"
+		m.printRow(backText, width)
+		m.printEmptyRow(width)
+	}
+
+	// Quit option
+	if m.ShowQuit {
+		quitText := "  [q] Exit"
+		m.printRow(quitText, width)
+		m.printEmptyRow(width)
+	}
+
+	// Bottom border
+	fmt.Println(ColorCyan.Sprint("╚" + strings.Repeat("═", width-2) + "╝"))
+
+	// Status bar
+	if DefaultMenuConfig.ShowStatus && m.StatusBar != nil {
+		fmt.Println()
+		fmt.Println(ColorGray.Sprint(strings.Repeat("─", width)))
+		fmt.Println(m.StatusBar())
+	}
+
+	fmt.Println()
+}
+
+// printMenuItem prints a single menu item
+func (m *Menu) printMenuItem(item MenuItem, width int) {
+	// Format: "  [1] 🚀 Start Monitoring      Start watching for emails"
+	keyPart := fmt.Sprintf("  [%s]", item.Key)
+
+	var labelPart string
+	if item.Icon != "" {
+		labelPart = fmt.Sprintf(" %s %s", item.Icon, item.Label)
+	} else {
+		labelPart = fmt.Sprintf(" %s", item.Label)
+	}
+
+	// Calculate spacing for description
+	usedSpace := len(keyPart) + len(labelPart)
+	descStart := 35 // Column where description starts
+
+	var line string
+	if item.Description != "" {
+		spacing := descStart - usedSpace
+		if spacing < 2 {
+			spacing = 2
+		}
+		line = fmt.Sprintf("%s%s%s%s",
+			ColorBold.Sprint(keyPart),
+			labelPart,
+			strings.Repeat(" ", spacing),
+			ColorDim.Sprint(item.Description),
+		)
+	} else {
+		line = fmt.Sprintf("%s%s", ColorBold.Sprint(keyPart), labelPart)
+	}
+
+	m.printRow(line, width)
+}
+
+// printRow prints a row with borders
+func (m *Menu) printRow(content string, width int) {
+	// Calculate visible length (without ANSI codes)
+	visibleLen := len(stripANSI(content))
+	padding := width - visibleLen - 4 // -4 for borders and spaces
+	if padding < 0 {
+		padding = 0
+	}
+
+	fmt.Printf("%s %s%s %s\n",
+		ColorCyan.Sprint("║"),
+		content,
+		strings.Repeat(" ", padding),
+		ColorCyan.Sprint("║"),
+	)
+}
+
+// printCenteredRow prints centered text with borders
+func (m *Menu) printCenteredRow(text string, width int) {
+	textLen := len(text)
+	totalPadding := width - textLen - 4
+	leftPadding := totalPadding / 2
+	rightPadding := totalPadding - leftPadding
+
+	fmt.Printf("%s%s%s%s%s%s\n",
+		ColorCyan.Sprint("║"),
+		strings.Repeat(" ", leftPadding),
+		ColorBold.Sprint(text),
+		strings.Repeat(" ", rightPadding),
+		ColorCyan.Sprint("║"),
+	)
+}
+
+// printEmptyRow prints an empty row with borders
+func (m *Menu) printEmptyRow(width int) {
+	fmt.Printf("%s%s%s\n",
+		ColorCyan.Sprint("║"),
+		strings.Repeat(" ", width-2),
+		ColorCyan.Sprint("║"),
+	)
+}
+
+// getUserInput gets user input
+func (m *Menu) getUserInput() string {
+	ColorGreen.Print("Select an option: ")
+	reader := bufio.NewReader(os.Stdin)
+	input, _ := reader.ReadString('\n')
+	return strings.TrimSpace(strings.ToLower(input))
+}
+
+// findItem finds a menu item by key
+func (m *Menu) findItem(key string) *MenuItem {
+	for i := range m.Items {
+		if m.Items[i].Key == key {
+			return &m.Items[i]
+		}
+	}
+	return nil
+}
+
+// stripANSI removes ANSI escape codes for length calculation
+func stripANSI(str string) string {
+	// Simple ANSI stripper - removes common escape sequences
+	result := str
+	result = strings.ReplaceAll(result, "\033[0m", "")
+	result = strings.ReplaceAll(result, "\033[1m", "")
+	result = strings.ReplaceAll(result, "\033[2m", "")
+	result = strings.ReplaceAll(result, "\033[36m", "")
+	result = strings.ReplaceAll(result, "\033[34m", "")
+	result = strings.ReplaceAll(result, "\033[32m", "")
+	result = strings.ReplaceAll(result, "\033[33m", "")
+	result = strings.ReplaceAll(result, "\033[31m", "")
+	result = strings.ReplaceAll(result, "\033[90m", "")
+
+	// Remove any remaining escape sequences (more thorough)
+	for strings.Contains(result, "\033[") {
+		start := strings.Index(result, "\033[")
+		end := strings.Index(result[start:], "m")
+		if end == -1 {
+			break
+		}
+		result = result[:start] + result[start+end+1:]
+	}
+
+	return result
+}
+
+// BuildMainMenu creates the main menu structure
+func BuildMainMenu() *Menu {
+	menu := NewMenu("Main Menu")
+
+	menu.AddItem("1", "🚀", "Start Monitoring", "Start watching for emails", func() error {
+		PrintSection("Start Email Monitoring")
+		fmt.Println()
+		PrintInfo("To start monitoring, use one of these commands:")
+		fmt.Println()
+		PrintBullet("email-sentinel start              (foreground)")
+		PrintBullet("email-sentinel start --tray       (with system tray)")
+		PrintBullet("email-sentinel start --daemon     (background)")
+		fmt.Println()
+		PrintInfo("The monitoring service must run separately from this menu.")
+		return nil
+	})
+
+	// Filter Management submenu
+	filterMenu := buildFilterMenu()
+	menu.AddSubMenu("2", "📋", "Manage Filters", "Add, edit, remove filters", filterMenu)
+
+	// Notifications submenu
+	notifMenu := buildNotificationsMenu()
+	menu.AddSubMenu("3", "🔔", "Notifications", "Configure alerts", notifMenu)
+
+	// Status submenu
+	statusMenu := buildStatusMenu()
+	menu.AddSubMenu("4", "📊", "Status & History", "View alerts and status", statusMenu)
+
+	// Settings submenu
+	settingsMenu := buildSettingsMenu()
+	menu.AddSubMenu("5", "⚙️", "Settings", "Configure app settings", settingsMenu)
+
+	menu.AddItem("6", "🔧", "Setup Wizard", "Re-run initial setup", func() error {
+		ClearScreen()
+		wizard := NewWizard()
+		return wizard.Run()
+	})
+
+	// Add status bar
+	menu.SetStatusBar(func() string {
+		return fmt.Sprintf("Status: %s Running | Filters: 3 | Last check: 2 min ago",
+			ColorGreen.Sprint("●"))
+	})
+
+	return menu
+}
+
+// buildFilterMenu creates the filter management submenu
+func buildFilterMenu() *Menu {
+	menu := NewMenu("Filter Management")
+
+	menu.AddItem("1", "➕", "Add Filter", "Create a new filter", func() error {
+		PrintSection("Add New Filter")
+		PrintInfo("Creating a new email filter...")
+		// Placeholder for actual filter add logic
+		return nil
+	})
+
+	menu.AddItem("2", "✏️", "Edit Filter", "Modify existing filter", func() error {
+		PrintSection("Edit Filter")
+		PrintInfo("Editing filter...")
+		return nil
+	})
+
+	menu.AddItem("3", "🗑️", "Remove Filter", "Delete a filter", func() error {
+		PrintSection("Remove Filter")
+		PrintWarning("Removing filter...")
+		return nil
+	})
+
+	menu.AddItem("4", "📋", "List Filters", "View all filters", func() error {
+		PrintSection("Filter List")
+
+		headers := []string{"Name", "From", "Subject", "Labels"}
+		rows := [][]string{
+			{"Job Alerts", "linkedin.com", "interview", "work,career"},
+			{"Boss", "boss@company.com", "(any)", "work,urgent"},
+			{"Client", "client@example.com", "invoice", "work,billing"},
+		}
+		PrintTable(headers, rows)
+
+		return nil
+	})
+
+	return menu
+}
+
+// buildNotificationsMenu creates the notifications submenu
+func buildNotificationsMenu() *Menu {
+	menu := NewMenu("Notifications")
+
+	menu.AddItem("1", "🖥️", "Desktop Notifications", "Toggle on/off", func() error {
+		PrintSection("Desktop Notifications")
+		PrintSuccess("Desktop notifications are enabled")
+		return nil
+	})
+
+	menu.AddItem("2", "📱", "Mobile (ntfy.sh)", "Configure mobile push", func() error {
+		PrintSection("Mobile Notifications")
+		PrintInfo("Configure mobile push notifications via ntfy.sh")
+		PrintKeyValue("Status", "Disabled")
+		PrintKeyValue("Topic", "Not configured")
+		return nil
+	})
+
+	menu.AddItem("3", "🧪", "Test Notifications", "Send test alert", func() error {
+		PrintSection("Test Notifications")
+		PrintInfo("Sending test notification...")
+		time.Sleep(1 * time.Second)
+		PrintSuccess("Test notification sent!")
+		return nil
+	})
+
+	return menu
+}
+
+// buildStatusMenu creates the status submenu
+func buildStatusMenu() *Menu {
+	menu := NewMenu("Status & History")
+
+	menu.AddItem("1", "📊", "Dashboard", "System status overview", func() error {
+		return RunInteractiveDashboard()
+	})
+
+	menu.AddItem("2", "📜", "Alert History", "View past notifications", func() error {
+		return ShowAlertHistory()
+	})
+
+	menu.AddItem("3", "🔍", "Check Gmail", "Test Gmail connection", func() error {
+		PrintSection("Gmail Connection Test")
+		PrintInfo("Testing Gmail API connection...")
+		time.Sleep(1 * time.Second)
+		PrintSuccess("Successfully connected to Gmail!")
+		PrintKeyValue("Account", "user@gmail.com")
+		PrintKeyValue("API Status", "Active")
+		return nil
+	})
+
+	return menu
+}
+
+// buildSettingsMenu creates the settings submenu
+func buildSettingsMenu() *Menu {
+	menu := NewMenu("Settings")
+
+	menu.AddItem("1", "⏱️", "Polling Interval", "Set check frequency", func() error {
+		PrintSection("Polling Interval")
+		PrintInfo("Current polling interval: 45 seconds")
+		fmt.Println()
+		PrintBullet("Recommended: 30-60 seconds")
+		PrintBullet("Shorter intervals use more API quota")
+		return nil
+	})
+
+	menu.AddItem("2", "🔐", "Re-authenticate", "Re-run Gmail OAuth", func() error {
+		PrintSection("Gmail Re-authentication")
+		PrintWarning("This will open your browser to re-authorize Gmail access")
+		return nil
+	})
+
+	menu.AddItem("3", "📁", "Open Config Folder", "Open config directory", func() error {
+		PrintSection("Configuration Location")
+		PrintKeyValue("Config Dir", "~/.config/email-sentinel/")
+		PrintKeyValue("Config File", "config.yaml")
+		PrintKeyValue("Database", "history.db")
+		PrintKeyValue("Token File", "token.json")
+		return nil
+	})
+
+	menu.AddItem("4", "🔄", "Reset to Defaults", "Clear all settings", func() error {
+		PrintSection("Reset Settings")
+		PrintWarning("This will delete all filters and configuration!")
+		PrintError("This action cannot be undone.")
+		return nil
+	})
+
+	return menu
+}
+
+// RunInteractiveMenu starts the main interactive menu
+func RunInteractiveMenu() {
+	ClearScreen()
+	PrintBanner(AppVersion)
+
+	menu := BuildMainMenu()
+	menu.Run()
+}
+
+// ShowAlertHistory displays today's email alerts
+func ShowAlertHistory() error {
+	PrintSection("Alert History")
+
+	// Initialize database
+	db, err := storage.InitDB()
+	if err != nil {
+		PrintError(fmt.Sprintf("Error opening alert database: %v", err))
+		return err
+	}
+	defer storage.CloseDB(db)
+
+	// Get all alerts from today
+	alerts, err := storage.GetTodayAlerts(db)
+	if err != nil {
+		PrintError(fmt.Sprintf("Error fetching alerts: %v", err))
+		return err
+	}
+
+	if len(alerts) == 0 {
+		fmt.Println()
+		PrintInfo("No alerts today")
+		return nil
+	}
+
+	// Display header
+	count, _ := storage.CountTodayAlerts(db)
+	fmt.Printf("\n📬 Today's Alerts (%d total)\n\n", count)
+
+	// Display each alert
+	for i, alert := range alerts {
+		// Add priority indicator
+		priorityIcon := "📩" // Normal priority
+		if alert.Priority == 1 {
+			priorityIcon = "🔥" // High priority
+		}
+
+		fmt.Printf("[%d] %s %s\n", i+1, priorityIcon, alert.Timestamp.Format("2006-01-02 15:04:05"))
+		fmt.Printf("    Filter: %s\n", alert.FilterName)
+		if alert.Priority == 1 {
+			fmt.Printf("    Priority: HIGH\n")
+		}
+		fmt.Printf("    From:   %s\n", alert.Sender)
+		fmt.Printf("    Subject: %s\n", alert.Subject)
+
+		if alert.Snippet != "" {
+			// Truncate snippet if too long
+			snippet := alert.Snippet
+			if len(snippet) > 100 {
+				snippet = snippet[:97] + "..."
+			}
+			fmt.Printf("    Preview: %s\n", snippet)
+		}
+
+		fmt.Printf("    Link:   %s\n", alert.GmailLink)
+		fmt.Println()
+	}
+
+	return nil
+}

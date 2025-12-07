@@ -1,16 +1,20 @@
 /*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
+Copyright © 2025 Datateamsix <research@dt6.io>
 */
 package cmd
 
 import (
+	"bufio"
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/datateamsix/email-sentinel/internal/ui"
 )
 
-
+var versionFlag bool
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -43,7 +47,20 @@ Quick Start:
   4. email-sentinel start --tray            # Start monitoring with tray icon
   5. email-sentinel alerts                  # View alert history
 
-More Info: https://github.com/yourusername/email-sentinel`,
+Interactive Mode:
+  Run 'email-sentinel' without arguments to open the interactive menu.
+
+More Info: https://github.com/datateamsix/email-sentinel`,
+	Run: func(cmd *cobra.Command, args []string) {
+		// Handle version flag
+		if versionFlag {
+			fmt.Printf("Email Sentinel v%s\n", ui.AppVersion)
+			return
+		}
+
+		// No subcommand provided - launch interactive mode
+		runInteractive()
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -56,9 +73,58 @@ func Execute() {
 }
 
 func init() {
+	// Add version flag
+	rootCmd.Flags().BoolVarP(&versionFlag, "version", "v", false, "Print version information")
+
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.email-sentinel.yaml)")
 }
 
+// runInteractive launches the interactive menu system
+func runInteractive() {
+	// Clear screen and show banner
+	ui.ClearScreen()
+	ui.PrintBanner(ui.AppVersion)
 
+	// Check if first-time setup needed
+	if ui.ShouldRunWizard() {
+		fmt.Println()
+		ui.PrintInfo("Welcome! It looks like this is your first time running Email Sentinel.")
+		fmt.Println()
+
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Print(ui.ColorGreen.Sprint("Would you like to run the setup wizard? [Y/n]: "))
+
+		response, _ := reader.ReadString('\n')
+		response = strings.TrimSpace(strings.ToLower(response))
+
+		if response == "" || response == "y" || response == "yes" {
+			wizard := ui.NewWizard()
+			if err := wizard.Run(); err != nil {
+				if err.Error() != "wizard cancelled by user" {
+					ui.PrintError(fmt.Sprintf("Setup wizard error: %v", err))
+					fmt.Println()
+					ui.PrintInfo("You can run the wizard again later from the main menu.")
+					fmt.Println()
+					fmt.Print("Press Enter to continue...")
+					reader.ReadString('\n')
+				} else {
+					// User quit wizard
+					ui.PrintInfo("Setup wizard cancelled. You can run it again from the main menu.")
+					fmt.Println()
+					fmt.Print("Press Enter to continue...")
+					reader.ReadString('\n')
+				}
+			}
+		} else {
+			ui.PrintInfo("Skipping setup wizard. You can run it later from the main menu.")
+			fmt.Println()
+			fmt.Print("Press Enter to continue...")
+			reader.ReadString('\n')
+		}
+	}
+
+	// Launch main menu
+	ui.RunInteractiveMenu()
+}

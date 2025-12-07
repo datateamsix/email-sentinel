@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"bufio"
+	"database/sql"
 	"fmt"
 	"os"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/datateamsix/email-sentinel/internal/filter"
+	"github.com/datateamsix/email-sentinel/internal/storage"
 )
 
 var (
@@ -19,6 +21,7 @@ var (
 	filterFrom    string
 	filterSubject string
 	filterMatch   string
+	filterLabels  string
 )
 
 var addCmd = &cobra.Command{
@@ -55,6 +58,7 @@ func init() {
 	addCmd.Flags().StringVarP(&filterFrom, "from", "f", "", "Sender patterns (comma-separated)")
 	addCmd.Flags().StringVarP(&filterSubject, "subject", "s", "", "Subject patterns (comma-separated)")
 	addCmd.Flags().StringVarP(&filterMatch, "match", "m", "any", "Match mode: 'any' (OR) or 'all' (AND)")
+	addCmd.Flags().StringVarP(&filterLabels, "labels", "l", "", "Labels/categories (comma-separated, e.g., work,urgent)")
 }
 
 func runFilterAdd(cmd *cobra.Command, args []string) {
@@ -128,18 +132,53 @@ func runFilterAdd(cmd *cobra.Command, args []string) {
 		}
 	}
 
+	// Get labels/categories
+	if !cmd.Flags().Changed("labels") && interactive {
+		// Try to load existing labels from database
+		db, _ := getDB()
+		var existingLabels []string
+		if db != nil {
+			existingLabels, _ = getExistingLabels(db)
+			db.Close()
+		}
+
+		fmt.Println("\n🏷️  Labels/Categories (Optional)")
+		fmt.Println("   Organize filters by category (e.g., work, personal, urgent)")
+
+		if len(existingLabels) > 0 {
+			fmt.Printf("   Existing labels: %s\n", strings.Join(existingLabels, ", "))
+		}
+
+		fmt.Print("\nLabels (comma-separated, or blank to skip): ")
+		filterLabels, _ = reader.ReadString('\n')
+		filterLabels = strings.TrimSpace(filterLabels)
+	}
+
+	// Parse labels
+	labelsList := parseCSV(filterLabels)
+
 	// Create filter
 	f := filter.Filter{
 		Name:    filterName,
 		From:    fromPatterns,
 		Subject: subjectPatterns,
 		Match:   filterMatch,
+		Labels:  labelsList,
 	}
 
 	// Save filter
 	if err := filter.AddFilter(f); err != nil {
 		fmt.Printf("\n❌ Error adding filter: %v\n", err)
 		os.Exit(1)
+	}
+
+	// Save labels to database for reuse
+	if len(labelsList) > 0 {
+		db, err := getDB()
+		if err == nil && db != nil {
+			saveLabelsToDatabase(db, labelsList)
+			db.Close()
+		}
 	}
 
 	fmt.Println("\n✅ Filter added successfully!")
@@ -151,6 +190,7 @@ func runFilterAdd(cmd *cobra.Command, args []string) {
 	filterFrom = ""
 	filterSubject = ""
 	filterMatch = "any"
+	filterLabels = ""
 }
 
 func parseCSV(s string) []string {
@@ -179,10 +219,28 @@ func printFilter(f filter.Filter) {
 	if len(f.Subject) > 0 {
 		fmt.Printf("  Subject: %s\n", strings.Join(f.Subject, ", "))
 	}
+	if len(f.Labels) > 0 {
+		fmt.Printf("  Labels:  %s\n", strings.Join(f.Labels, ", "))
+	}
 
 	matchDesc := "any (OR - either condition triggers)"
 	if f.Match == "all" {
 		matchDesc = "all (AND - all conditions must match)"
 	}
 	fmt.Printf("  Match:   %s\n", matchDesc)
+}
+
+// getDB initializes and returns a database connection
+func getDB() (*sql.DB, error) {
+	return storage.InitDB()
+}
+
+// getExistingLabels retrieves all existing labels from the database
+func getExistingLabels(db *sql.DB) ([]string, error) {
+	return storage.GetAllLabels(db)
+}
+
+// saveLabelsToDatabase saves labels to the database for reuse
+func saveLabelsToDatabase(db *sql.DB, labels []string) {
+	storage.SaveLabels(db, labels)
 }

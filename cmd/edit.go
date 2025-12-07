@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/datateamsix/email-sentinel/internal/filter"
+	"github.com/datateamsix/email-sentinel/internal/storage"
 )
 
 var editCmd = &cobra.Command{
@@ -137,6 +138,41 @@ func runFilterEdit(cmd *cobra.Command, args []string) {
 	if len(selectedFilter.From) == 0 && len(selectedFilter.Subject) == 0 {
 		fmt.Println("\n❌ At least one 'from' or 'subject' pattern is required")
 		os.Exit(1)
+	}
+
+	// Edit labels/categories
+	currentLabels := strings.Join(selectedFilter.Labels, ", ")
+	if currentLabels == "" {
+		currentLabels = "(none)"
+	}
+
+	// Try to load existing labels from database
+	db, _ := storage.InitDB()
+	var existingLabels []string
+	if db != nil {
+		existingLabels, _ = storage.GetAllLabels(db)
+	}
+
+	fmt.Printf("\nLabels/Categories [%s]: ", currentLabels)
+	if len(existingLabels) > 0 {
+		fmt.Printf("\n   Existing labels: %s\n   Enter new value: ", strings.Join(existingLabels, ", "))
+	}
+	input, _ = reader.ReadString('\n')
+	input = strings.TrimSpace(input)
+	if input != "" {
+		if input == "-" || input == "none" {
+			selectedFilter.Labels = []string{}
+		} else {
+			selectedFilter.Labels = parseCSV(input)
+			// Save new labels to database
+			if db != nil {
+				storage.SaveLabels(db, selectedFilter.Labels)
+			}
+		}
+	}
+
+	if db != nil {
+		db.Close()
 	}
 
 	// Edit match mode (only if both from and subject exist)

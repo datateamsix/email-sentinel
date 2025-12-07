@@ -13,16 +13,17 @@ import (
 
 // Alert represents an email notification stored in the database
 type Alert struct {
-	ID         int64
-	Timestamp  time.Time
-	Sender     string
-	Subject    string
-	Snippet    string
-	Labels     string
-	MessageID  string
-	GmailLink  string
-	FilterName string
-	Priority   int
+	ID           int64
+	Timestamp    time.Time
+	Sender       string
+	Subject      string
+	Snippet      string
+	Labels       string   // Gmail labels
+	MessageID    string
+	GmailLink    string
+	FilterName   string
+	FilterLabels []string // Filter categories (not stored in DB, populated at runtime)
+	Priority     int
 }
 
 const schema = `
@@ -41,6 +42,15 @@ CREATE TABLE IF NOT EXISTS alerts (
 
 CREATE INDEX IF NOT EXISTS idx_timestamp ON alerts(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_message_id ON alerts(message_id);
+
+CREATE TABLE IF NOT EXISTS filter_labels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    label TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    created_at INTEGER NOT NULL,
+    last_used INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_label ON filter_labels(label COLLATE NOCASE);
 `
 
 // InitDB initializes the SQLite database and creates tables if needed
@@ -241,4 +251,59 @@ func scanAlerts(rows *sql.Rows) ([]Alert, error) {
 	}
 
 	return alerts, nil
+}
+
+// SaveLabel saves or updates a label in the database
+// If the label already exists, updates its last_used timestamp
+func SaveLabel(db *sql.DB, label string) error {
+	now := time.Now().Unix()
+
+	query := `
+		INSERT INTO filter_labels (label, created_at, last_used)
+		VALUES (?, ?, ?)
+		ON CONFLICT(label) DO UPDATE SET last_used = ?
+	`
+
+	_, err := db.Exec(query, label, now, now, now)
+	if err != nil {
+		return fmt.Errorf("failed to save label: %w", err)
+	}
+
+	return nil
+}
+
+// GetAllLabels returns all labels ordered by most recently used
+func GetAllLabels(db *sql.DB) ([]string, error) {
+	query := `SELECT label FROM filter_labels ORDER BY last_used DESC`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query labels: %w", err)
+	}
+	defer rows.Close()
+
+	var labels []string
+	for rows.Next() {
+		var label string
+		if err := rows.Scan(&label); err != nil {
+			return nil, fmt.Errorf("failed to scan label: %w", err)
+		}
+		labels = append(labels, label)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating labels: %w", err)
+	}
+
+	return labels, nil
+}
+
+// SaveLabels saves multiple labels at once
+func SaveLabels(db *sql.DB, labels []string) error {
+	for _, label := range labels {
+		if err := SaveLabel(db, label); err != nil {
+			return err
+		}
+	}
+	return nil
 }

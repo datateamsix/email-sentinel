@@ -291,27 +291,35 @@ Let's create a simple test filter that will definitely trigger.
 ```powershell
 .\email-sentinel.exe filter add `
   --name "Self Test" `
-  --from "YOUR_EMAIL@gmail.com"
+  --from "YOUR_EMAIL@gmail.com" `
+  --labels "test"
 ```
 
 **macOS/Linux (Bash):**
 ```bash
 ./email-sentinel filter add \
   --name "Self Test" \
-  --from "YOUR_EMAIL@gmail.com"
+  --from "YOUR_EMAIL@gmail.com" \
+  --labels "test"
 ```
 
 **Replace `YOUR_EMAIL@gmail.com` with your actual Gmail address!**
 
 **Example (Windows):**
 ```powershell
-.\email-sentinel.exe filter add --name "Self Test" --from "john.doe@gmail.com"
+.\email-sentinel.exe filter add --name "Self Test" --from "john.doe@gmail.com" --labels "test"
 ```
 
 **Example (macOS/Linux):**
 ```bash
-./email-sentinel filter add --name "Self Test" --from "john.doe@gmail.com"
+./email-sentinel filter add --name "Self Test" --from "john.doe@gmail.com" --labels "test"
 ```
+
+**Note about Labels:**
+- Labels help organize your filters (e.g., "work", "personal", "urgent")
+- Labels appear in ALL notifications (desktop, mobile, toast)
+- Once created, labels are saved and suggested when creating new filters
+- Use `--labels "work,urgent"` for multiple labels (comma-separated)
 
 ### Verify Filter
 

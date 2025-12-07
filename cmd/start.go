@@ -215,8 +215,8 @@ func checkEmails(client *gmail.Client, cfg *filter.Config, seenMessages *state.S
 		// Parse message
 		email := gmail.ParseMessage(msg)
 
-		// Check against all filters
-		matchedFilters, err := filter.CheckAllFilters(email.From, email.Subject)
+		// Check against all filters (with metadata including labels)
+		matchedFilters, err := filter.CheckAllFiltersWithMetadata(email.From, email.Subject)
 		if err != nil {
 			fmt.Printf("⚠️  Error checking filters: %v\n", err)
 			continue
@@ -226,22 +226,27 @@ func checkEmails(client *gmail.Client, cfg *filter.Config, seenMessages *state.S
 		if len(matchedFilters) > 0 {
 			matchCount++
 
-			for _, filterName := range matchedFilters {
-				fmt.Printf("📧 MATCH [%s] From: %s | Subject: %s\n",
-					filterName, email.From, email.Subject)
+			for _, match := range matchedFilters {
+				labelStr := ""
+				if len(match.Labels) > 0 {
+					labelStr = fmt.Sprintf(" 🏷️ %s", strings.Join(match.Labels, ", "))
+				}
+				fmt.Printf("📧 MATCH [%s]%s From: %s | Subject: %s\n",
+					match.Name, labelStr, email.From, email.Subject)
 
-				// Send desktop notification
+				// Send desktop notification with labels
 				if cfg.Notifications.Desktop {
-					if err := notify.SendEmailAlert(filterName, email.From, email.Subject); err != nil {
+					if err := notify.SendEmailAlertWithLabels(match.Name, match.Labels, email.From, email.Subject); err != nil {
 						fmt.Printf("   ⚠️  Desktop notification failed: %v\n", err)
 					}
 				}
 
-				// Send mobile notification
+				// Send mobile notification with labels
 				if cfg.Notifications.Mobile.Enabled && cfg.Notifications.Mobile.NtfyTopic != "" {
-					if err := notify.SendMobileEmailAlert(
+					if err := notify.SendMobileEmailAlertWithLabels(
 						cfg.Notifications.Mobile.NtfyTopic,
-						filterName,
+						match.Name,
+						match.Labels,
 						email.From,
 						email.Subject,
 					); err != nil {
@@ -260,15 +265,16 @@ func checkEmails(client *gmail.Client, cfg *filter.Config, seenMessages *state.S
 
 				// Save alert to database
 				alert := &storage.Alert{
-					Timestamp:  time.Now(),
-					Sender:     email.From,
-					Subject:    email.Subject,
-					Snippet:    email.Snippet,
-					Labels:     strings.Join(msg.LabelIds, ","),
-					MessageID:  msg.Id,
-					GmailLink:  gmail.BuildGmailLink(msg.Id),
-					FilterName: filterName,
-					Priority:   priority,
+					Timestamp:    time.Now(),
+					Sender:       email.From,
+					Subject:      email.Subject,
+					Snippet:      email.Snippet,
+					Labels:       strings.Join(msg.LabelIds, ","),
+					MessageID:    msg.Id,
+					GmailLink:    gmail.BuildGmailLink(msg.Id),
+					FilterName:   match.Name,
+					FilterLabels: match.Labels,
+					Priority:     priority,
 				}
 
 				if err := storage.InsertAlert(db, alert); err != nil {

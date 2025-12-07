@@ -6,6 +6,13 @@ type Filter struct {
 	From    []string `yaml:"from"`
 	Subject []string `yaml:"subject"`
 	Match   string   `yaml:"match"` // "any" or "all"
+	Labels  []string `yaml:"labels,omitempty"` // Categories like "work", "personal", etc.
+}
+
+// MatchResult represents a matched filter with its metadata
+type MatchResult struct {
+	Name   string
+	Labels []string
 }
 
 // Config represents the application configuration

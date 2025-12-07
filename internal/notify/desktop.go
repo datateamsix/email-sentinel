@@ -23,3 +23,19 @@ func SendEmailAlert(filterName, from, subject string) error {
 
 	return SendDesktopNotification(title, message)
 }
+
+// SendEmailAlertWithLabels sends a desktop notification for a matched email with labels
+func SendEmailAlertWithLabels(filterName string, labels []string, from, subject string) error {
+	title := fmt.Sprintf("📧 Email Match: %s", filterName)
+	message := fmt.Sprintf("From: %s\nSubject: %s", from, subject)
+
+	if len(labels) > 0 {
+		labelsStr := ""
+		for _, label := range labels {
+			labelsStr += "🏷️ " + label + " "
+		}
+		message = fmt.Sprintf("%s\n%s", labelsStr, message)
+	}
+
+	return SendDesktopNotification(title, message)
+}

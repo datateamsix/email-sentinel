@@ -30,10 +30,20 @@ const (
 //   - Clicking opens the Gmail link in default browser
 //   - Priority 1 emails use an urgent visual style
 func SendAlertNotification(a storage.Alert) error {
+	// Build message with filter labels if present
+	message := fmt.Sprintf("From: %s", a.Sender)
+	if len(a.FilterLabels) > 0 {
+		labelsStr := ""
+		for _, label := range a.FilterLabels {
+			labelsStr += "🏷️ " + label + " "
+		}
+		message = labelsStr + "\n" + message
+	}
+
 	notification := toast.Notification{
 		AppID:   AppID,
 		Title:   a.Subject,
-		Message: fmt.Sprintf("From: %s", a.Sender),
+		Message: message,
 		Actions: []toast.Action{
 			{
 				Type:      "protocol",
@@ -48,11 +58,11 @@ func SendAlertNotification(a storage.Alert) error {
 	if a.Snippet != "" {
 		snippet := a.Snippet
 		// Truncate snippet if too long (Windows toast has character limits)
-		if len(snippet) > 150 {
-			snippet = snippet[:147] + "..."
+		if len(snippet) > 120 { // Reduced from 150 to account for labels
+			snippet = snippet[:117] + "..."
 		}
 		// Append snippet to message
-		notification.Message = fmt.Sprintf("From: %s\n\n%s", a.Sender, snippet)
+		notification.Message = message + "\n\n" + snippet
 	}
 
 	// For priority alerts, use different audio and visual cues

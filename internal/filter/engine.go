@@ -176,3 +176,23 @@ func CheckAllFilters(fromAddress string, subject string) ([]string, error) {
 
 	return matchedFilters, nil
 }
+
+// CheckAllFiltersWithMetadata checks an email against all filters and returns detailed match results
+func CheckAllFiltersWithMetadata(fromAddress string, subject string) ([]MatchResult, error) {
+	filters, err := ListFilters()
+	if err != nil {
+		return nil, err
+	}
+
+	var matchedFilters []MatchResult
+	for _, f := range filters {
+		if MatchesFilter(f, fromAddress, subject) {
+			matchedFilters = append(matchedFilters, MatchResult{
+				Name:   f.Name,
+				Labels: f.Labels,
+			})
+		}
+	}
+
+	return matchedFilters, nil
+}

@@ -1,0 +1,14 @@
+#Feature Notes
+Need a cohesive UI in CLI 
+1. Onboarding wizard
+    - email address 
+    - GCP credentials 
+    - rules for yaml 
+    -Authentication
+    -First filter 
+    -Start listener with tray 
+    - Setup mobile notifications ntfy.sh 
+
+2. Main Menu 
+    - Checking schtasks and setting up autorun for windows and Mac 
+    - 

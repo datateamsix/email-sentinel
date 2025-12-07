@@ -61,6 +61,10 @@ func runFilterList(cmd *cobra.Command, args []string) {
 			fmt.Println("    Subject: (any)")
 		}
 
+		if len(f.Labels) > 0 {
+			fmt.Printf("    Labels:  🏷️  %s\n", strings.Join(f.Labels, ", "))
+		}
+
 		matchDesc := "any (OR - either condition triggers)"
 		if f.Match == "all" {
 			matchDesc = "all (AND - all conditions must match)"

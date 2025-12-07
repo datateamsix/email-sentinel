@@ -21,6 +21,8 @@ type TrayApp struct {
 	quitChan        chan struct{}
 	mu              sync.Mutex
 	hasUrgent       bool
+	refreshTimer    *time.Timer
+	refreshMu       sync.Mutex
 }
 
 // Config holds configuration for the tray app
@@ -50,8 +52,10 @@ func Run(cfg Config) {
 
 // onReady is called when the system tray is ready
 func onReady() {
-	// Set initial icon and title
-	systray.SetIcon(GetNormalIcon())
+	// Set initial icon and title (only if valid icon data exists)
+	if icon := GetNormalIcon(); icon != nil && len(icon) > 0 {
+		systray.SetIcon(icon)
+	}
 	systray.SetTitle("Email Sentinel")
 	systray.SetTooltip("Email Sentinel - Monitoring Gmail")
 
@@ -76,6 +80,22 @@ func onReady() {
 func onExit() {
 	log.Println("🛑 System tray shutting down")
 	close(globalApp.quitChan)
+}
+
+// scheduleRefresh schedules a debounced refresh of the alerts menu
+// Multiple calls within 500ms will be batched into a single refresh
+func (app *TrayApp) scheduleRefresh() {
+	app.refreshMu.Lock()
+	defer app.refreshMu.Unlock()
+
+	// Reset the timer if it exists, otherwise create a new one
+	if app.refreshTimer != nil {
+		app.refreshTimer.Stop()
+	}
+
+	app.refreshTimer = time.AfterFunc(500*time.Millisecond, func() {
+		app.loadRecentAlerts()
+	})
 }
 
 // loadRecentAlerts loads the 10 most recent alerts from the database
@@ -114,12 +134,16 @@ func (app *TrayApp) loadRecentAlerts() {
 	}
 	app.hasUrgent = hasUrgent
 
-	// Update icon based on urgent status
+	// Update icon based on urgent status (only if valid icon data exists)
 	if hasUrgent {
-		systray.SetIcon(GetUrgentIcon())
+		if icon := GetUrgentIcon(); icon != nil && len(icon) > 0 {
+			systray.SetIcon(icon)
+		}
 		systray.SetTooltip("Email Sentinel - ⚠️ Urgent alerts!")
 	} else {
-		systray.SetIcon(GetNormalIcon())
+		if icon := GetNormalIcon(); icon != nil && len(icon) > 0 {
+			systray.SetIcon(icon)
+		}
 		systray.SetTooltip("Email Sentinel - Monitoring Gmail")
 	}
 
@@ -198,24 +222,28 @@ func (app *TrayApp) handleAlertUpdates() {
 
 			// Temporarily switch to urgent icon if it's a priority alert
 			if alert.Priority == 1 {
+				app.mu.Lock()
 				app.hasUrgent = true
-				systray.SetIcon(GetUrgentIcon())
-				systray.SetTooltip("Email Sentinel - ⚠️ New urgent alert!")
+				app.mu.Unlock()
 
-				// Flash the icon by switching back after a few seconds
+				if icon := GetUrgentIcon(); icon != nil && len(icon) > 0 {
+					systray.SetIcon(icon)
+					systray.SetTooltip("Email Sentinel - ⚠️ New urgent alert!")
+				}
+
+				// Schedule a refresh after icon flash (debounced)
 				go func() {
 					time.Sleep(5 * time.Second)
-					// Check if there are still urgent alerts
-					app.loadRecentAlerts()
+					app.scheduleRefresh()
 				}()
 			}
 
-			// Reload the alerts menu
-			app.loadRecentAlerts()
+			// Schedule refresh for the new alert (debounced)
+			app.scheduleRefresh()
 
 		case <-ticker.C:
-			// Periodically refresh the alerts
-			app.loadRecentAlerts()
+			// Periodically refresh the alerts (debounced)
+			app.scheduleRefresh()
 
 		case <-app.quitChan:
 			return

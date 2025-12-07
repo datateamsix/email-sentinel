@@ -19,6 +19,7 @@ Waiting for important emails (job opportunities, client responses, urgent messag
 ### Core Functionality
 - **Cross-Platform**: Single binary for Windows, macOS, and Linux
 - **Flexible Filters**: Match by sender, subject keywords, or both
+- **Filter Labels/Categories**: Organize filters with reusable labels (work, personal, urgent, etc.)
 - **AND/OR Logic**: Configure whether all conditions must match or any condition triggers
 - **Smart Priority Rules**: YAML-based rules engine for automatic priority classification
 - **Low Resource**: Lightweight polling with configurable intervals
@@ -26,10 +27,11 @@ Waiting for important emails (job opportunities, client responses, urgent messag
 - **No Cost**: Uses Gmail API free tier (1B quota units/day)
 
 ### Notifications
-- **Desktop Notifications**: Native OS notifications (Windows, macOS, Linux)
-- **Windows Toast Notifications**: Rich, clickable notifications in Action Center with Gmail links
-- **Mobile Push**: Free push notifications to iPhone/Android via [ntfy.sh](https://ntfy.sh)
+- **Desktop Notifications**: Native OS notifications (Windows, macOS, Linux) with filter labels
+- **Windows Toast Notifications**: Rich, clickable notifications in Action Center with Gmail links and labels
+- **Mobile Push**: Free push notifications to iPhone/Android via [ntfy.sh](https://ntfy.sh) with label tags
 - **System Tray**: Background app with tray icon showing recent alerts (Windows/macOS/Linux)
+- **Label Display**: All notifications show filter labels for easy categorization
 
 ### Alert Management
 - **Alert History**: SQLite database stores all alerts with automatic daily cleanup
@@ -45,6 +47,7 @@ Waiting for important emails (job opportunities, client responses, urgent messag
 - [Configuration](#configuration)
 - [Commands](#commands)
 - [Filter Examples](#filter-examples)
+- [Filter Labels](#filter-labels)
 - [Priority Rules](#priority-rules)
 - [Alert History](#alert-history)
 - [System Tray](#system-tray)
@@ -121,8 +124,8 @@ GOOS=linux GOARCH=amd64 go build -o email-sentinel-linux .
 # 2. Initialize and authenticate
 ./email-sentinel init
 
-# 3. Add a filter
-./email-sentinel filter add --name "Job Alerts" --from "linkedin.com,greenhouse.io"
+# 3. Add a filter with labels
+./email-sentinel filter add --name "Job Alerts" --from "linkedin.com,greenhouse.io" --labels "work,career"
 
 # 4. Test notifications
 ./email-sentinel test desktop
@@ -170,12 +173,18 @@ filters:
       - "application"
       - "opportunity"
     match: any  # "any" (OR) or "all" (AND)
+    labels:
+      - work
+      - career
 
   - name: "Client Emails"
     from:
       - "client@company.com"
     subject: []
     match: any
+    labels:
+      - work
+      - urgent
 
 notifications:
   desktop: true
@@ -208,10 +217,10 @@ email-sentinel init
 
 ### `filter add`
 
-Add a new email filter.
+Add a new email filter with optional labels/categories.
 
 ```bash
-# Interactive mode
+# Interactive mode (shows existing labels for reuse)
 email-sentinel filter add
 
 # With flags
@@ -219,15 +228,23 @@ email-sentinel filter add \
   --name "Job Alerts" \
   --from "linkedin.com,greenhouse.io" \
   --subject "interview,opportunity" \
-  --match any
+  --match any \
+  --labels "work,career"
 ```
 
-| Flag        | Short | Description                           |
-|-------------|-------|---------------------------------------|
-| `--name`    | `-n`  | Filter name (required)                |
-| `--from`    | `-f`  | Sender patterns, comma-separated      |
-| `--subject` | `-s`  | Subject patterns, comma-separated     |
-| `--match`   | `-m`  | Match mode: `any` or `all` (default: `any`) |
+| Flag        | Short | Description                                      |
+|-------------|-------|--------------------------------------------------|
+| `--name`    | `-n`  | Filter name (required)                           |
+| `--from`    | `-f`  | Sender patterns, comma-separated                 |
+| `--subject` | `-s`  | Subject patterns, comma-separated                |
+| `--match`   | `-m`  | Match mode: `any` or `all` (default: `any`)      |
+| `--labels`  | `-l`  | Labels/categories, comma-separated (e.g., work,urgent) |
+
+**Labels Feature:**
+- Labels are stored in the database and suggested when creating new filters
+- Labels appear in all notifications (desktop, mobile, toast)
+- Organize filters by category: work, personal, urgent, etc.
+- Reuse existing labels or create new ones on-the-fly
 
 ### `filter list`
 
@@ -378,7 +395,8 @@ email-sentinel filter add \
   --name "Job Applications" \
   --from "linkedin.com,greenhouse.io,lever.co,indeed.com" \
   --subject "interview,application,opportunity,position" \
-  --match any
+  --match any \
+  --labels "work,career"
 ```
 
 ### Specific Sender
@@ -386,7 +404,8 @@ email-sentinel filter add \
 ```bash
 email-sentinel filter add \
   --name "From Boss" \
-  --from "boss@company.com"
+  --from "boss@company.com" \
+  --labels "work,urgent"
 ```
 
 ### Subject Keywords Only
@@ -394,7 +413,8 @@ email-sentinel filter add \
 ```bash
 email-sentinel filter add \
   --name "Urgent Emails" \
-  --subject "urgent,asap,emergency,critical"
+  --subject "urgent,asap,emergency,critical" \
+  --labels "urgent"
 ```
 
 ### Precise Match (AND)
@@ -404,8 +424,91 @@ email-sentinel filter add \
   --name "Client Invoices" \
   --from "billing@client.com" \
   --subject "invoice,payment" \
-  --match all
+  --match all \
+  --labels "work,billing"
 ```
+
+### Personal Emails
+
+```bash
+email-sentinel filter add \
+  --name "Family Updates" \
+  --from "mom@example.com,dad@example.com" \
+  --labels "personal,family"
+```
+
+## 🏷️ Filter Labels
+
+Email Sentinel allows you to organize filters with reusable labels/categories.
+
+### How It Works
+
+**First Time:**
+```bash
+email-sentinel filter add --name "Boss" --from "boss@company.com" --labels "work,urgent"
+```
+Labels "work" and "urgent" are saved to the database.
+
+**Next Time:**
+```bash
+email-sentinel filter add
+# Interactive mode shows: "Existing labels: work, urgent"
+# You can reuse or add new ones
+```
+
+### Label Features
+
+- **Persistent Storage**: Labels saved in SQLite database (`history.db`)
+- **Auto-Suggest**: Interactive mode shows existing labels
+- **Smart Sorting**: Most recently used labels appear first
+- **Flexible**: Create new labels anytime or reuse existing ones
+
+### Label Display in Notifications
+
+All notification types display filter labels:
+
+**Desktop Notification:**
+```
+📧 Email Match: Boss
+🏷️ work 🏷️ urgent
+From: boss@company.com
+Subject: Quarterly Review
+```
+
+**Mobile Push (ntfy.sh):**
+```
+Title: 📧 Boss
+🏷️ work 🏷️ urgent
+From: boss@company.com
+Subject: Quarterly Review
+Tags: email,alert,work,urgent
+```
+
+**Windows Toast:**
+```
+Subject: Quarterly Review
+🏷️ work 🏷️ urgent
+From: boss@company.com
+[Email snippet preview...]
+```
+
+**Console Output:**
+```
+📧 MATCH [Boss] 🏷️ work, urgent From: boss@company.com | Subject: Quarterly Review
+```
+
+### Common Label Examples
+
+| Label      | Use Case                                |
+|------------|-----------------------------------------|
+| work       | Work-related emails                     |
+| personal   | Personal correspondence                 |
+| urgent     | Time-sensitive emails                   |
+| billing    | Invoices and payments                   |
+| career     | Job opportunities, interviews           |
+| family     | Family communications                   |
+| finance    | Banking, investments                    |
+| social     | Social media notifications              |
 
 ## 🎯 Priority Rules
 

@@ -81,6 +81,7 @@ archives:
       - docs/**/*
       - otp_rules.yaml
       - rules.yaml
+      - ai-config.yaml
 
 # Checksums
 checksum:

@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Sentinel - Gmail Notification Monitor</title>
+    <meta name="description" content="Monitor Gmail and get instant notifications on desktop and mobile with AI-powered summaries and OTP detection">
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Email Sentinel - Gmail Notification Monitor">
+    <meta property="og:description" content="Monitor Gmail and get instant notifications on desktop and mobile with AI-powered summaries and OTP detection">
+    <meta property="og:image" content="https://datateamsix.github.io/email-sentinel/images/logo.png">
+    <meta property="og:url" content="https://datateamsix.github.io/email-sentinel/">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Email Sentinel">
+    <meta name="twitter:description" content="Monitor Gmail and get instant notifications on desktop and mobile">
+    <meta name="twitter:image" content="https://datateamsix.github.io/email-sentinel/images/logo.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../images/logo.png">
+
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-dark: #4338CA;
+            --secondary: #10B981;
+            --dark: #1F2937;
+            --light: #F3F4F6;
+            --text: #374151;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, #7C3AED 100%);
+            color: white;
+            padding: 80px 0 100px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.1) 0%, transparent 50%);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .tagline {
+            font-size: 1.3rem;
+            opacity: 0.95;
+            margin-bottom: 40px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 15px 35px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .btn-primary {
+            background: white;
+            color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            background: var(--light);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: 2px solid white;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Features Section */
+        .features {
+            padding: 100px 0;
+            background: white;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.8rem;
+            margin-bottom: 60px;
+            color: var(--dark);
+            font-weight: 700;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            margin-bottom: 60px;
+        }
+
+        .feature-card {
+            text-align: center;
+            padding: 40px 30px;
+            border-radius: 15px;
+            background: var(--light);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-color: var(--primary);
+        }
+
+        .feature-icon {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .feature-card h3 {
+            font-size: 1.6rem;
+            margin-bottom: 15px;
+            color: var(--dark);
+            font-weight: 600;
+        }
+
+        .feature-card p {
+            color: var(--text);
+            line-height: 1.7;
+        }
+
+        /* Installation Section */
+        .installation {
+            padding: 100px 0;
+            background: var(--light);
+        }
+
+        .install-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 12px 30px;
+            background: white;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+            background: var(--dark);
+            color: white;
+            padding: 40px;
+            border-radius: 12px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        pre {
+            overflow-x: auto;
+            white-space: pre-wrap;
+            line-height: 1.8;
+            font-size: 0.95rem;
+        }
+
+        code {
+            color: #10B981;
+        }
+
+        /* Stats Section */
+        .stats {
+            background: var(--primary);
+            color: white;
+            padding: 60px 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            text-align: center;
+        }
+
+        .stat-item h3 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .stat-item p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--dark);
+            color: white;
+            text-align: center;
+            padding: 50px 0;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: white;
+            text-decoration: none;
+            font-size: 1.1rem;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--secondary);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5rem; }
+            .tagline { font-size: 1.1rem; }
+            .section-title { font-size: 2.2rem; }
+            .feature-grid { grid-template-columns: 1fr; }
+            .logo { font-size: 3rem; }
+        }
+
+        /* Scroll Animations */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <header>
+        <div class="container hero-content">
+            <div class="logo">📧</div>
+            <h1>Email Sentinel</h1>
+            <p class="tagline">Monitor Gmail and get instant notifications on desktop and mobile with AI-powered summaries</p>
+            <div class="cta-buttons">
+                <a href="https://github.com/datateamsix/email-sentinel/releases/latest" class="btn btn-primary">
+                    ⬇️ Download Latest
+                </a>
+                <a href="https://github.com/datateamsix/email-sentinel" class="btn btn-secondary">
+                    ⭐ View on GitHub
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="container">
+            <h2 class="section-title">✨ Powerful Features</h2>
+            <div class="feature-grid">
+                <div class="feature-card fade-in">
+                    <span class="feature-icon">🔔</span>
+                    <h3>Real-Time Alerts</h3>
+                    <p>Get instant desktop and mobile notifications when emails match your custom filters</p>
+                </div>
+
+                <div class="feature-card fade-in">
+                    <span class="feature-icon">🤖</span>
+                    <h3>AI Summaries</h3>
+                    <p>Optional AI-powered email summaries with questions and action items (Claude, OpenAI, Gemini)</p>
+                </div>
+
+                <div class="feature-card fade-in">
+                    <span class="feature-icon">🔐</span>
+                    <h3>OTP Detection</h3>
+                    <p>Automatically extract and manage 2FA verification codes from your emails</p>
+                </div>
+
+                <div class="feature-card fade-in">
+                    <span class="feature-icon">🏷️</span>
+                    <h3>Smart Filters</h3>
+                    <p>Organize with labels, priority rules, and flexible AND/OR matching logic</p>
+                </div>
+
+                <div class="feature-card fade-in">
+                    <span class="feature-icon">💻</span>
+                    <h3>Cross-Platform</h3>
+                    <p>Single binary for Windows, macOS (Intel + ARM), and Linux (amd64, arm64)</p>
+                </div>
+
+                <div class="feature-card fade-in">
+                    <span class="feature-icon">🔒</span>
+                    <h3>Secure & Private</h3>
+                    <p>OAuth 2.0 authentication with local storage. No data leaves your machine.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <h3>100%</h3>
+                    <p>Open Source</p>
+                </div>
+                <div class="stat-item">
+                    <h3>MIT</h3>
+                    <p>Licensed</p>
+                </div>
+                <div class="stat-item">
+                    <h3>Free</h3>
+                    <p>Gmail API Tier</p>
+                </div>
+                <div class="stat-item">
+                    <h3>3+</h3>
+                    <p>Platforms</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Installation Section -->
+    <section class="installation">
+        <div class="container">
+            <h2 class="section-title">📦 Quick Installation</h2>
+
+            <div class="install-tabs">
+                <button class="tab-btn active" onclick="showTab('mac')">🍎 macOS</button>
+                <button class="tab-btn" onclick="showTab('windows')">🪟 Windows</button>
+                <button class="tab-btn" onclick="showTab('linux')">🐧 Linux</button>
+                <button class="tab-btn" onclick="showTab('docker')">🐳 Docker</button>
+            </div>
+
+            <div id="mac" class="tab-content active">
+                <pre><code># Using Homebrew (recommended)
+brew tap datateamsix/tap
+brew install email-sentinel
+
+# Initialize and authenticate
+email-sentinel init
+
+# Add your first filter
+email-sentinel filter add
+
+# Start monitoring with system tray
+email-sentinel start --tray --ai-summary</code></pre>
+            </div>
+
+            <div id="windows" class="tab-content">
+                <pre><code># Using Scoop (recommended)
+scoop bucket add datateamsix https://github.com/datateamsix/scoop-bucket
+scoop install email-sentinel
+
+# Initialize and authenticate
+email-sentinel init
+
+# Add your first filter
+email-sentinel filter add
+
+# Start monitoring with system tray
+email-sentinel start --tray --ai-summary</code></pre>
+            </div>
+
+            <div id="linux" class="tab-content">
+                <pre><code># Debian/Ubuntu
+wget https://github.com/datateamsix/email-sentinel/releases/latest/download/email-sentinel_*_amd64.deb
+sudo dpkg -i email-sentinel_*_amd64.deb
+
+# RHEL/Fedora/CentOS
+wget https://github.com/datateamsix/email-sentinel/releases/latest/download/email-sentinel_*_x86_64.rpm
+sudo rpm -i email-sentinel_*_x86_64.rpm
+
+# Initialize and authenticate
+email-sentinel init
+
+# Start monitoring
+email-sentinel start --tray</code></pre>
+            </div>
+
+            <div id="docker" class="tab-content">
+                <pre><code># Pull the latest image
+docker pull datateamsix/email-sentinel:latest
+
+# Run with mounted config directory
+docker run -v ~/.email-sentinel:/root/.email-sentinel \
+  datateamsix/email-sentinel:latest start --daemon
+
+# Or use docker-compose
+curl -O https://raw.githubusercontent.com/datateamsix/email-sentinel/main/docker-compose.yml
+docker-compose up -d</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 DataTeam Six. Licensed under MIT License.</p>
+            <div class="footer-links">
+                <a href="https://github.com/datateamsix/email-sentinel">GitHub</a>
+                <a href="https://github.com/datateamsix/email-sentinel/blob/main/README.md">Documentation</a>
+                <a href="https://github.com/datateamsix/email-sentinel/releases">Releases</a>
+                <a href="https://github.com/datateamsix/email-sentinel/issues">Issues</a>
+                <a href="https://github.com/datateamsix/email-sentinel/blob/main/LICENSE">License</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Tab switching
+        function showTab(tabId) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.fade-in').forEach(el => {
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>

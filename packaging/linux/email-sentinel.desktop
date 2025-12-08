@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Email Sentinel
+GenericName=Gmail Notification Monitor
+Comment=Monitor Gmail and receive real-time notifications
+Exec=email-sentinel start --tray
+Icon=mail-notification
+Terminal=false
+Type=Application
+Categories=Network;Email;Utility;
+Keywords=email;gmail;notification;monitor;
+StartupNotify=false

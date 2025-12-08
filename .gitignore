@@ -7,6 +7,16 @@ token.json
 /email-sentinel.exe
 /dist/
 
+# GoReleaser artifacts
+.goreleaser.yaml.cache
+dist/
+*.tar.gz
+*.zip
+*.deb
+*.rpm
+*.apk
+*.dmg
+
 # IDE
 .idea/
 .vscode/

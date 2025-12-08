@@ -13,12 +13,18 @@ import (
 // Constants
 const (
 	AppName    = "Email Sentinel"
-	AppVersion = "1.0.0"
 	AppTagline = "Real-time Gmail Notification System"
 
 	// Width constraints
 	BannerWidth = 58
 	DividerChar = "═"
+)
+
+// Version information (injected at build time via ldflags)
+var (
+	AppVersion = "dev"      // Overridden by -ldflags "-X ..." at build time
+	BuildTime  = "unknown"  // Build timestamp
+	GitCommit  = "none"     // Git commit SHA
 )
 
 // Color definitions (gracefully degrade if terminal doesn't support)

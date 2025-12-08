@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  email-sentinel:
+    image: datateamsix/email-sentinel:latest
+    container_name: email-sentinel
+    restart: unless-stopped
+
+    # Mount config directory for persistence
+    volumes:
+      - ./config:/home/sentinel/.config/email-sentinel
+      # Optional: Mount credentials
+      # - ./credentials.json:/home/sentinel/.config/email-sentinel/credentials.json:ro
+
+    # Environment variables (optional)
+    environment:
+      # Set timezone
+      - TZ=America/New_York
+
+    # Resource limits (optional)
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Network (optional - use bridge network)
+    networks:
+      - email-sentinel-network
+
+networks:
+  email-sentinel-network:
+    driver: bridge

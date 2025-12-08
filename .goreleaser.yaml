@@ -1,0 +1,381 @@
+# GoReleaser Configuration for Email Sentinel
+# https://goreleaser.com
+
+version: 2
+
+# Project metadata
+project_name: email-sentinel
+
+# Before hooks - run tests before building
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+# Build configuration
+builds:
+  - id: email-sentinel
+    main: .
+    binary: email-sentinel
+
+    # Environment variables for build
+    env:
+      - CGO_ENABLED=0  # Pure Go build (modernc.org/sqlite is CGO-free)
+
+    # Linker flags for version injection and optimization
+    ldflags:
+      - -s -w  # Strip debug info (reduces binary size)
+      - -X github.com/datateamsix/email-sentinel/internal/ui.AppVersion={{.Version}}
+      - -X github.com/datateamsix/email-sentinel/internal/ui.BuildTime={{.Date}}
+      - -X github.com/datateamsix/email-sentinel/internal/ui.GitCommit={{.ShortCommit}}
+
+    # Target platforms
+    goos:
+      - windows
+      - darwin
+      - linux
+
+    # Target architectures
+    goarch:
+      - amd64
+      - arm64
+      - "386"  # Windows 32-bit support
+
+    # Ignore invalid combinations
+    ignore:
+      - goos: darwin
+        goarch: "386"
+      - goos: linux
+        goarch: "386"
+
+    # Windows-specific settings
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+# Universal macOS binary (combines amd64 + arm64)
+universal_binaries:
+  - id: email-sentinel-universal
+    replace: true
+    name_template: email-sentinel
+
+# Archive configuration (tar.gz for Unix, zip for Windows)
+archives:
+  - id: default
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+    format_overrides:
+      - goos: windows
+        format: zip
+
+    # Files to include in archives
+    files:
+      - README.md
+      - LICENSE
+      - docs/**/*
+      - otp_rules.yaml
+      - rules.yaml
+
+# Checksums
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+# Snapshots (builds without tags)
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+# Changelog configuration
+changelog:
+  use: github
+  sort: asc
+  abbrev: 7
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: "Bug Fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: "Documentation"
+      regexp: '^.*?docs(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: "Performance Improvements"
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 3
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - "^test:"
+      - "^chore:"
+      - "merge conflict"
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+
+# Linux packages (DEB and RPM)
+nfpms:
+  - id: packages
+    package_name: email-sentinel
+
+    # Package metadata
+    vendor: DataTeam Six
+    homepage: https://github.com/datateamsix/email-sentinel
+    maintainer: DataTeam Six <noreply@github.com>
+    description: |
+      Cross-platform CLI tool that monitors Gmail and sends real-time
+      desktop and mobile notifications when emails match custom filters.
+    license: MIT
+
+    # Package formats
+    formats:
+      - deb
+      - rpm
+      - apk
+
+    # Dependencies
+    dependencies:
+      - ca-certificates
+
+    # Recommends (optional dependencies)
+    recommends:
+      - git
+
+    # systemd service file
+    contents:
+      - src: packaging/linux/email-sentinel.service
+        dst: /usr/lib/systemd/user/email-sentinel.service
+        file_info:
+          mode: 0644
+
+      # Desktop entry for GUI package managers
+      - src: packaging/linux/email-sentinel.desktop
+        dst: /usr/share/applications/email-sentinel.desktop
+        file_info:
+          mode: 0644
+
+      # Config directory
+      - dst: /etc/email-sentinel
+        type: dir
+        file_info:
+          mode: 0755
+
+    # Scripts
+    scripts:
+      postinstall: packaging/linux/postinstall.sh
+      preremove: packaging/linux/preremove.sh
+
+    # DEB-specific settings
+    deb:
+      lintian_overrides:
+        - statically-linked-binary
+        - changelog-file-missing-in-native-package
+
+    # RPM-specific settings
+    rpm:
+      group: Applications/Internet
+      compression: lzma
+
+# Homebrew formula
+brews:
+  - name: email-sentinel
+
+    # Tap repository
+    repository:
+      owner: datateamsix
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+
+    # Commit configuration
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+
+    # Metadata
+    homepage: https://github.com/datateamsix/email-sentinel
+    description: "Monitor Gmail and get instant notifications on desktop and mobile"
+    license: MIT
+
+    # Install script
+    install: |
+      bin.install "email-sentinel"
+
+      # Install config templates
+      (etc/"email-sentinel").install "otp_rules.yaml"
+      (etc/"email-sentinel").install "rules.yaml"
+
+    # Service configuration
+    service: |
+      run [opt_bin/"email-sentinel", "start", "--daemon"]
+      keep_alive true
+      log_path var/"log/email-sentinel.log"
+      error_log_path var/"log/email-sentinel.error.log"
+
+    # Test script
+    test: |
+      system "#{bin}/email-sentinel", "--version"
+
+    # Dependencies
+    dependencies:
+      - name: go
+        type: optional
+
+# Scoop manifest (Windows package manager)
+scoops:
+  - name: email-sentinel
+
+    # Bucket repository
+    repository:
+      owner: datateamsix
+      name: scoop-bucket
+      token: "{{ .Env.SCOOP_BUCKET_TOKEN }}"
+
+    # Commit configuration
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+
+    # Metadata
+    homepage: https://github.com/datateamsix/email-sentinel
+    description: "Monitor Gmail and get instant notifications on desktop and mobile"
+    license: MIT
+
+    # Post-install message
+    post_install:
+      - "Run 'email-sentinel init' to get started"
+      - "See 'email-sentinel --help' for all commands"
+
+# Windows NSIS installer (optional - requires NSIS installed)
+# nfpms handles basic packaging, but NSIS provides richer installer experience
+# Uncomment when ready to implement Windows installer
+# nsis:
+#   - id: windows-installer
+#     name_template: "email-sentinel_{{ .Version }}_setup"
+#     homepage: https://github.com/datateamsix/email-sentinel
+#     license: LICENSE
+#     description: "Email Sentinel - Gmail Notification Monitor"
+#     install_mode: user
+#     shortcuts:
+#       - name: "Email Sentinel"
+#         target: email-sentinel.exe
+
+# Docker images
+dockers:
+  - id: email-sentinel-docker
+
+    # Image names and tags
+    image_templates:
+      - "datateamsix/email-sentinel:latest"
+      - "datateamsix/email-sentinel:{{ .Version }}"
+      - "datateamsix/email-sentinel:{{ .Major }}"
+      - "datateamsix/email-sentinel:{{ .Major }}.{{ .Minor }}"
+
+    # Dockerfile configuration
+    dockerfile: Dockerfile
+
+    # Build arguments
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+      - "--platform=linux/amd64"
+
+    # Files to include
+    extra_files:
+      - otp_rules.yaml
+      - rules.yaml
+
+# GitHub Release configuration
+release:
+  # Release name template
+  name_template: "v{{ .Version }}"
+
+  # Release draft (set to false for auto-publish)
+  draft: false
+
+  # Prerelease detection
+  prerelease: auto
+
+  # Release notes
+  header: |
+    ## Email Sentinel {{ .Version }}
+
+    Download the appropriate binary for your platform below.
+    For installation instructions, see the [documentation](https://github.com/datateamsix/email-sentinel#installation).
+
+  footer: |
+    ---
+
+    **Full Changelog**: https://github.com/datateamsix/email-sentinel/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+    ### Installation
+
+    **macOS/Linux (Homebrew)**:
+    ```bash
+    brew tap datateamsix/tap
+    brew install email-sentinel
+    ```
+
+    **Windows (Scoop)**:
+    ```powershell
+    scoop bucket add datateamsix https://github.com/datateamsix/scoop-bucket
+    scoop install email-sentinel
+    ```
+
+    **Linux (DEB/RPM)**:
+    Download the `.deb` or `.rpm` package and install with your package manager.
+
+    **Direct Download**:
+    Download the appropriate archive for your platform, extract, and run.
+
+  # Extra files to include in release
+  extra_files:
+    - glob: ./docs/*.md
+    - glob: ./images/*.png
+
+# Announce releases (optional - requires tokens)
+# Uncomment when ready to enable
+# announce:
+#   discord:
+#     enabled: true
+#     message_template: '🎉 Email Sentinel {{ .Tag }} is out! Check it out: {{ .ReleaseURL }}'
+#
+#   slack:
+#     enabled: true
+#     message_template: 'Email Sentinel {{ .Tag }} released! {{ .ReleaseURL }}'
+
+# Signing (optional - requires GPG key)
+# Uncomment when ready to sign releases
+# signs:
+#   - cmd: gpg
+#     args:
+#       - "--batch"
+#       - "--local-user"
+#       - "{{ .Env.GPG_FINGERPRINT }}"
+#       - "--output"
+#       - "${signature}"
+#       - "--detach-sign"
+#       - "${artifact}"
+#     artifacts: all
+#     output: true
+
+# Source archive
+source:
+  enabled: true
+  name_template: "{{ .ProjectName }}_{{ .Version }}_source"
+  format: tar.gz
+
+# Git configuration
+git:
+  ignore_tags:
+    - "{{ if not .IsNightly }}nightly{{ end }}"

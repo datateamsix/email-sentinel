@@ -2,9 +2,12 @@
 
 A cross-platform CLI tool that monitors your Gmail inbox and sends real-time notifications when emails match your custom filters. Get instant alerts on desktop and mobile without constantly checking your inbox.
 
+[![Latest Release](https://img.shields.io/github/v/release/datateamsix/email-sentinel)](https://github.com/datateamsix/email-sentinel/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/datateamsix/email-sentinel/total)](https://github.com/datateamsix/email-sentinel/releases)
 [![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat&logo=go)](https://go.dev/)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://github.com/yourusername/email-sentinel)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://github.com/datateamsix/email-sentinel)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/datateamsix/email-sentinel)](https://goreportcard.com/report/github.com/datateamsix/email-sentinel)
 
 ## 🎯 Problem Statement
 
@@ -89,34 +92,87 @@ Waiting for important emails (job opportunities, client responses, urgent messag
 
 ## 📦 Installation
 
+### Package Managers (Recommended)
+
+#### macOS / Linux (Homebrew)
+
+```bash
+brew tap datateamsix/tap
+brew install email-sentinel
+```
+
+#### Windows (Scoop)
+
+```powershell
+scoop bucket add datateamsix https://github.com/datateamsix/scoop-bucket
+scoop install email-sentinel
+```
+
+#### Linux (Debian/Ubuntu)
+
+```bash
+# Download latest .deb package
+wget https://github.com/datateamsix/email-sentinel/releases/latest/download/email-sentinel_*_amd64.deb
+
+# Install
+sudo dpkg -i email-sentinel_*_amd64.deb
+```
+
+#### Linux (RHEL/Fedora/CentOS)
+
+```bash
+# Download latest .rpm package
+wget https://github.com/datateamsix/email-sentinel/releases/latest/download/email-sentinel_*_x86_64.rpm
+
+# Install
+sudo rpm -i email-sentinel_*_x86_64.rpm
+```
+
+### Direct Download
+
+Download pre-built binaries from the [releases page](https://github.com/datateamsix/email-sentinel/releases/latest):
+
+- **Windows**: `email-sentinel_windows_amd64.zip`
+- **macOS (Universal)**: `email-sentinel_darwin_universal.tar.gz`
+- **macOS (Intel)**: `email-sentinel_darwin_amd64.tar.gz`
+- **macOS (Apple Silicon)**: `email-sentinel_darwin_arm64.tar.gz`
+- **Linux (amd64)**: `email-sentinel_linux_amd64.tar.gz`
+- **Linux (arm64)**: `email-sentinel_linux_arm64.tar.gz`
+
+Extract the archive and move the binary to your PATH:
+
+```bash
+# macOS/Linux
+tar -xzf email-sentinel_*.tar.gz
+sudo mv email-sentinel /usr/local/bin/
+
+# Verify installation
+email-sentinel --version
+```
+
+### Docker
+
+```bash
+# Pull image
+docker pull datateamsix/email-sentinel:latest
+
+# Run with mounted config
+docker run -v ~/.email-sentinel:/root/.email-sentinel \
+  datateamsix/email-sentinel:latest start --daemon
+```
+
 ### From Source
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/email-sentinel.git
+git clone https://github.com/datateamsix/email-sentinel.git
 cd email-sentinel
 
 # Build for your platform
 go build -o email-sentinel .
 
-# Or build for all platforms
-./scripts/build-all.sh
-```
-
-### Cross-Compilation
-
-```bash
-# Windows
-GOOS=windows GOARCH=amd64 go build -o email-sentinel.exe .
-
-# macOS (Intel)
-GOOS=darwin GOARCH=amd64 go build -o email-sentinel-mac .
-
-# macOS (Apple Silicon)
-GOOS=darwin GOARCH=arm64 go build -o email-sentinel-mac-arm .
-
-# Linux
-GOOS=linux GOARCH=amd64 go build -o email-sentinel-linux .
+# Install locally
+sudo mv email-sentinel /usr/local/bin/
 ```
 
 ## 🚀 Quick Start

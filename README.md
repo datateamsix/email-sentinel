@@ -1,6 +1,6 @@
 # 📧 Email Sentinel
 
-A cross-platform CLI tool that monitors your Gmail inbox and sends real-time notifications when emails match your custom filters. Get instant alerts on desktop and mobile without constantly checking your inbox.
+A cross-platform CLI tool that monitors your Gmail inbox and sends real-time notifications when emails match your custom filters. Get instant alerts on desktop and mobile without constantly checking your inboxes. Surface time-sensitive email messages like OTP/2FA passcodes (copyable) to your desktop and phone. This tool allows you to create very specific and urgent alerts and you can click into those messages as needed. 
 
 [![Latest Release](https://img.shields.io/github/v/release/datateamsix/email-sentinel)](https://github.com/datateamsix/email-sentinel/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/datateamsix/email-sentinel/total)](https://github.com/datateamsix/email-sentinel/releases)

@@ -3,6 +3,7 @@ module github.com/datateamsix/email-sentinel
 go 1.24.0
 
 require (
+	github.com/atotto/clipboard v0.1.4
 	github.com/fatih/color v1.18.0
 	github.com/gen2brain/beeep v0.11.1
 	github.com/getlantern/systray v1.2.2

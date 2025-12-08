@@ -26,6 +26,24 @@ type Alert struct {
 	Priority     int
 }
 
+// OTPAlert represents an OTP code extracted from an email
+type OTPAlert struct {
+	ID          int64
+	Timestamp   time.Time
+	ExpiresAt   time.Time
+	Sender      string
+	Subject     string
+	OTPCode     string
+	Confidence  float64
+	Source      string
+	PatternName string
+	MessageID   string
+	GmailLink   string
+	FilterName  string
+	IsActive    bool
+	CopiedAt    *time.Time // Nullable timestamp
+}
+
 const schema = `
 CREATE TABLE IF NOT EXISTS alerts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -80,6 +98,12 @@ func InitDB() (*sql.DB, error) {
 	if _, err := db.Exec(schema); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("failed to create schema: %w", err)
+	}
+
+	// Run migrations for new features (like OTP alerts)
+	if err := RunMigrations(db); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 
 	return db, nil
@@ -306,4 +330,203 @@ func SaveLabels(db *sql.DB, labels []string) error {
 		}
 	}
 	return nil
+}
+
+// ======================================
+// OTP Alert Functions
+// ======================================
+
+// InsertOTPAlert saves a new OTP alert to the database
+func InsertOTPAlert(db *sql.DB, otp *OTPAlert) error {
+	query := `
+		INSERT INTO otp_alerts (
+			timestamp, expires_at, sender, subject, otp_code, confidence,
+			source, pattern_name, message_id, gmail_link, filter_name, is_active
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`
+
+	result, err := db.Exec(
+		query,
+		otp.Timestamp.Unix(),
+		otp.ExpiresAt.Unix(),
+		otp.Sender,
+		otp.Subject,
+		otp.OTPCode,
+		otp.Confidence,
+		otp.Source,
+		otp.PatternName,
+		otp.MessageID,
+		otp.GmailLink,
+		otp.FilterName,
+		boolToInt(otp.IsActive),
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to insert OTP alert: %w", err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return fmt.Errorf("failed to get insert ID: %w", err)
+	}
+
+	otp.ID = id
+	return nil
+}
+
+// GetActiveOTPAlerts returns all OTP alerts that are active and not expired
+func GetActiveOTPAlerts(db *sql.DB) ([]OTPAlert, error) {
+	query := `
+		SELECT
+			id, timestamp, expires_at, sender, subject, otp_code, confidence,
+			source, pattern_name, message_id, gmail_link, filter_name, is_active, copied_at
+		FROM otp_alerts
+		WHERE is_active = 1 AND expires_at > ?
+		ORDER BY timestamp DESC
+	`
+
+	now := time.Now().Unix()
+	rows, err := db.Query(query, now)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query active OTP alerts: %w", err)
+	}
+	defer rows.Close()
+
+	return scanOTPAlerts(rows)
+}
+
+// GetRecentOTPAlerts returns the N most recent OTP alerts regardless of status
+func GetRecentOTPAlerts(db *sql.DB, limit int) ([]OTPAlert, error) {
+	query := `
+		SELECT
+			id, timestamp, expires_at, sender, subject, otp_code, confidence,
+			source, pattern_name, message_id, gmail_link, filter_name, is_active, copied_at
+		FROM otp_alerts
+		ORDER BY timestamp DESC
+		LIMIT ?
+	`
+
+	rows, err := db.Query(query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query recent OTP alerts: %w", err)
+	}
+	defer rows.Close()
+
+	return scanOTPAlerts(rows)
+}
+
+// MarkOTPAsCopied updates the copied_at timestamp for an OTP alert
+func MarkOTPAsCopied(db *sql.DB, id int64) error {
+	query := "UPDATE otp_alerts SET copied_at = ? WHERE id = ?"
+
+	result, err := db.Exec(query, time.Now().Unix(), id)
+	if err != nil {
+		return fmt.Errorf("failed to mark OTP as copied: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("OTP alert with ID %d not found", id)
+	}
+
+	return nil
+}
+
+// ExpireOTPAlerts marks all expired OTP alerts as inactive
+// Returns the number of alerts that were expired
+func ExpireOTPAlerts(db *sql.DB) (int64, error) {
+	query := "UPDATE otp_alerts SET is_active = 0 WHERE expires_at <= ? AND is_active = 1"
+
+	result, err := db.Exec(query, time.Now().Unix())
+	if err != nil {
+		return 0, fmt.Errorf("failed to expire OTP alerts: %w", err)
+	}
+
+	expired, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get expired count: %w", err)
+	}
+
+	return expired, nil
+}
+
+// DeleteExpiredOTPAlerts deletes OTP alerts older than 24 hours
+// Returns the number of alerts that were deleted
+func DeleteExpiredOTPAlerts(db *sql.DB) (int64, error) {
+	cutoff := time.Now().Add(-24 * time.Hour).Unix()
+	query := "DELETE FROM otp_alerts WHERE timestamp < ?"
+
+	result, err := db.Exec(query, cutoff)
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete expired OTP alerts: %w", err)
+	}
+
+	deleted, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get deleted count: %w", err)
+	}
+
+	return deleted, nil
+}
+
+// scanOTPAlerts is a helper function to scan rows into OTPAlert structs
+func scanOTPAlerts(rows *sql.Rows) ([]OTPAlert, error) {
+	var alerts []OTPAlert
+
+	for rows.Next() {
+		var otp OTPAlert
+		var timestamp, expiresAt int64
+		var copiedAt sql.NullInt64
+		var isActive int
+
+		err := rows.Scan(
+			&otp.ID,
+			&timestamp,
+			&expiresAt,
+			&otp.Sender,
+			&otp.Subject,
+			&otp.OTPCode,
+			&otp.Confidence,
+			&otp.Source,
+			&otp.PatternName,
+			&otp.MessageID,
+			&otp.GmailLink,
+			&otp.FilterName,
+			&isActive,
+			&copiedAt,
+		)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan OTP alert: %w", err)
+		}
+
+		otp.Timestamp = time.Unix(timestamp, 0)
+		otp.ExpiresAt = time.Unix(expiresAt, 0)
+		otp.IsActive = isActive == 1
+
+		if copiedAt.Valid {
+			t := time.Unix(copiedAt.Int64, 0)
+			otp.CopiedAt = &t
+		}
+
+		alerts = append(alerts, otp)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating OTP alerts: %w", err)
+	}
+
+	return alerts, nil
+}
+
+// boolToInt converts a boolean to an integer (0 or 1) for SQLite storage
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }

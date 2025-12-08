@@ -46,3 +46,46 @@ func RunCleanupNow(db *sql.DB) error {
 	log.Printf("🧹 Manual cleanup completed: deleted %d alert(s)", deleted)
 	return nil
 }
+
+// StartOTPCleanup runs OTP cleanup every 1 minute
+// It expires inactive OTP codes and deletes old ones
+// Runs in a goroutine until stopChan is closed
+func StartOTPCleanup(db *sql.DB, stopChan <-chan struct{}) {
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	log.Println("🔐 OTP cleanup scheduler started (runs every 1 minute)")
+
+	// Run immediately on start
+	runOTPCleanup(db)
+
+	for {
+		select {
+		case <-ticker.C:
+			runOTPCleanup(db)
+
+		case <-stopChan:
+			log.Println("🛑 OTP cleanup scheduler stopped")
+			return
+		}
+	}
+}
+
+// runOTPCleanup executes the OTP cleanup tasks
+func runOTPCleanup(db *sql.DB) {
+	// Mark expired codes as inactive
+	expired, err := ExpireOTPAlerts(db)
+	if err != nil {
+		log.Printf("❌ Failed to expire OTP alerts: %v", err)
+	} else if expired > 0 {
+		log.Printf("🔐 Expired %d OTP alert(s)", expired)
+	}
+
+	// Delete old codes (older than 24h)
+	deleted, err := DeleteExpiredOTPAlerts(db)
+	if err != nil {
+		log.Printf("❌ Failed to delete old OTP alerts: %v", err)
+	} else if deleted > 0 {
+		log.Printf("🔐 Deleted %d old OTP alert(s)", deleted)
+	}
+}

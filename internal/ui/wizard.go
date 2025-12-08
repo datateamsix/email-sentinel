@@ -7,12 +7,15 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/datateamsix/email-sentinel/internal/config"
 	"github.com/datateamsix/email-sentinel/internal/filter"
 	"github.com/datateamsix/email-sentinel/internal/gmail"
 	"github.com/datateamsix/email-sentinel/internal/notify"
+	"github.com/datateamsix/email-sentinel/internal/otp"
 	"github.com/datateamsix/email-sentinel/internal/storage"
 
 	"golang.org/x/oauth2"
@@ -35,6 +38,9 @@ type WizardConfig struct {
 	DesktopEnabled     bool
 	MobileEnabled      bool
 	NtfyTopic          string
+	OTPEnabled         bool
+	OTPConfidence      float64
+	OTPExpiry          time.Duration
 	CredentialsPath    string
 	OAuthConfig        *oauth2.Config
 	Token              *oauth2.Token
@@ -44,9 +50,12 @@ type WizardConfig struct {
 func NewWizard() *Wizard {
 	return &Wizard{
 		CurrentStep: 0,
-		TotalSteps:  7,
+		TotalSteps:  8,
 		Config: &WizardConfig{
-			DesktopEnabled: true, // Default to desktop enabled
+			DesktopEnabled: true,          // Default to desktop enabled
+			OTPEnabled:     true,          // Default to OTP enabled
+			OTPConfidence:  0.7,           // Default confidence threshold
+			OTPExpiry:      5 * time.Minute, // Default expiry
 		},
 		reader: bufio.NewReader(os.Stdin),
 	}
@@ -81,12 +90,17 @@ func (w *Wizard) Run() error {
 		return err
 	}
 
-	// Step 6: Test & Verify
+	// Step 6: OTP Setup
+	if err := w.stepOTPSetup(); err != nil {
+		return err
+	}
+
+	// Step 7: Test & Verify
 	if err := w.stepTest(); err != nil {
 		return err
 	}
 
-	// Step 7: Complete
+	// Step 8: Complete
 	if err := w.stepComplete(); err != nil {
 		return err
 	}
@@ -125,6 +139,7 @@ func (w *Wizard) stepWelcome() error {
 	w.printBoxLine("  ✦ Gmail API authentication", 61)
 	w.printBoxLine("  ✦ Your first email filter", 61)
 	w.printBoxLine("  ✦ Desktop and mobile notifications", 61)
+	w.printBoxLine("  ✦ OTP/2FA code detection", 61)
 	w.printBoxLine("", 61)
 	w.printBoxLine("  Estimated time: 5 minutes", 61)
 	w.printBoxLine("", 61)
@@ -148,7 +163,7 @@ func (w *Wizard) stepPrerequisites() error {
 
 	fmt.Println()
 	fmt.Println(ColorCyan.Sprint("╔" + strings.Repeat("═", 61) + "╗"))
-	w.printBoxLine("           Step 1/6: Prerequisites Check", 61)
+	w.printBoxLine("           Step 1/7: Prerequisites Check", 61)
 	fmt.Println(ColorCyan.Sprint("╠" + strings.Repeat("═", 61) + "╣"))
 	w.printBoxLine("", 61)
 	w.printBoxLine("  Checking requirements...", 61)
@@ -198,7 +213,7 @@ func (w *Wizard) stepAuthentication() error {
 
 	fmt.Println()
 	fmt.Println(ColorCyan.Sprint("╔" + strings.Repeat("═", 61) + "╗"))
-	w.printBoxLine("           Step 2/6: Gmail Authentication", 61)
+	w.printBoxLine("           Step 2/7: Gmail Authentication", 61)
 	fmt.Println(ColorCyan.Sprint("╠" + strings.Repeat("═", 61) + "╣"))
 	w.printBoxLine("", 61)
 	w.printBoxLine("  Email Sentinel needs permission to read your Gmail.", 61)
@@ -254,7 +269,7 @@ func (w *Wizard) stepCreateFilter() error {
 
 	fmt.Println()
 	fmt.Println(ColorCyan.Sprint("╔" + strings.Repeat("═", 61) + "╗"))
-	w.printBoxLine("           Step 3/6: Create Your First Filter", 61)
+	w.printBoxLine("           Step 3/7: Create Your First Filter", 61)
 	fmt.Println(ColorCyan.Sprint("╠" + strings.Repeat("═", 61) + "╣"))
 	w.printBoxLine("", 61)
 	w.printBoxLine("  Let's create a filter to watch for important emails.", 61)
@@ -364,7 +379,7 @@ func (w *Wizard) stepNotifications() error {
 
 	fmt.Println()
 	fmt.Println(ColorCyan.Sprint("╔" + strings.Repeat("═", 61) + "╗"))
-	w.printBoxLine("           Step 4/6: Notification Setup", 61)
+	w.printBoxLine("           Step 4/7: Notification Setup", 61)
 	fmt.Println(ColorCyan.Sprint("╠" + strings.Repeat("═", 61) + "╣"))
 	w.printBoxLine("", 61)
 	w.printBoxLine("  How would you like to be notified?", 61)
@@ -443,6 +458,104 @@ func (w *Wizard) setupMobileNotifications() error {
 	return nil
 }
 
+// stepOTPSetup configures OTP/2FA code detection
+func (w *Wizard) stepOTPSetup() error {
+	ClearScreen()
+	w.printStepHeader("OTP/2FA Setup", 5)
+
+	fmt.Println()
+	fmt.Println(ColorCyan.Sprint("╔" + strings.Repeat("═", 61) + "╗"))
+	w.printBoxLine("           Step 5/7: OTP/2FA Code Detection", 61)
+	fmt.Println(ColorCyan.Sprint("╠" + strings.Repeat("═", 61) + "╣"))
+	w.printBoxLine("", 61)
+	w.printBoxLine("  Automatically extract verification codes from emails!", 61)
+	w.printBoxLine("", 61)
+	w.printBoxLine("  Features:", 61)
+	w.printBoxLine("  • Auto-detect OTP codes from Gmail, GitHub, etc.", 61)
+	w.printBoxLine("  • Copy codes to clipboard instantly", 61)
+	w.printBoxLine("  • Codes expire automatically for security", 61)
+	w.printBoxLine("  • View recent codes with 'email-sentinel otp list'", 61)
+	w.printBoxLine("", 61)
+	fmt.Println(ColorCyan.Sprint("╚" + strings.Repeat("═", 61) + "╝"))
+	fmt.Println()
+
+	// Ask if user wants to enable OTP
+	fmt.Println(ColorDim.Sprint("  Enable OTP/2FA code detection?"))
+	choice := w.getUserInput("\n[Y/n] (default: yes): ")
+	choice = strings.ToLower(strings.TrimSpace(choice))
+
+	if choice == "n" || choice == "no" {
+		w.Config.OTPEnabled = false
+		PrintWarning("OTP detection disabled")
+		w.waitForEnter()
+		w.CurrentStep++
+		return nil
+	}
+
+	w.Config.OTPEnabled = true
+	fmt.Println()
+	PrintSuccess("OTP detection enabled!")
+
+	// Ask if they want to customize settings
+	fmt.Println()
+	fmt.Println(ColorDim.Sprint("  Would you like to customize OTP settings?"))
+	fmt.Println(ColorDim.Sprint("  (or press Enter to use recommended defaults)"))
+	customChoice := w.getUserInput("\n[y/N]: ")
+
+	if strings.ToLower(strings.TrimSpace(customChoice)) == "y" || strings.ToLower(strings.TrimSpace(customChoice)) == "yes" {
+		// Customize confidence threshold
+		fmt.Println()
+		fmt.Println(ColorDim.Sprint("  Confidence threshold (0.0-1.0, default: 0.7)"))
+		fmt.Println(ColorDim.Sprint("  Higher = fewer false positives, may miss some codes"))
+		fmt.Println(ColorDim.Sprint("  Lower = catch more codes, may have false positives"))
+		confidenceInput := w.getUserInput("\nConfidence threshold: ")
+		if confidenceInput != "" {
+			if conf, err := strconv.ParseFloat(confidenceInput, 64); err == nil && conf >= 0 && conf <= 1 {
+				w.Config.OTPConfidence = conf
+			} else {
+				PrintWarning("Invalid value, using default (0.7)")
+			}
+		}
+
+		// Customize expiry duration
+		fmt.Println()
+		fmt.Println(ColorDim.Sprint("  Code expiry duration (in minutes, default: 5)"))
+		fmt.Println(ColorDim.Sprint("  Most OTP codes expire in 5-10 minutes"))
+		expiryInput := w.getUserInput("\nExpiry (minutes): ")
+		if expiryInput != "" {
+			if minutes, err := strconv.Atoi(expiryInput); err == nil && minutes > 0 {
+				w.Config.OTPExpiry = time.Duration(minutes) * time.Minute
+			} else {
+				PrintWarning("Invalid value, using default (5 minutes)")
+			}
+		}
+	}
+
+	// Save OTP configuration
+	rules := otp.DefaultOTPRules()
+	rules.Enabled = w.Config.OTPEnabled
+	rules.ConfidenceThreshold = w.Config.OTPConfidence
+	rules.ExpiryDuration = w.Config.OTPExpiry
+
+	// Get config directory and save rules
+	configDir, err := config.ConfigDir()
+	if err != nil {
+		PrintWarning(fmt.Sprintf("Could not get config directory: %v", err))
+	} else {
+		rulesPath := filepath.Join(configDir, "otp_rules.yaml")
+		if err := otp.SaveOTPRules(rulesPath, rules); err != nil {
+			PrintWarning(fmt.Sprintf("Could not save OTP settings: %v", err))
+		} else {
+			fmt.Println()
+			PrintInfo(fmt.Sprintf("OTP Settings: Confidence=%.1f, Expiry=%v", w.Config.OTPConfidence, w.Config.OTPExpiry))
+		}
+	}
+
+	w.waitForEnter()
+	w.CurrentStep++
+	return nil
+}
+
 // stepTest runs verification tests
 func (w *Wizard) stepTest() error {
 	ClearScreen()
@@ -450,7 +563,7 @@ func (w *Wizard) stepTest() error {
 
 	fmt.Println()
 	fmt.Println(ColorCyan.Sprint("╔" + strings.Repeat("═", 61) + "╗"))
-	w.printBoxLine("           Step 5/6: Test Your Setup", 61)
+	w.printBoxLine("           Step 6/7: Test Your Setup", 61)
 	fmt.Println(ColorCyan.Sprint("╠" + strings.Repeat("═", 61) + "╣"))
 	w.printBoxLine("", 61)
 	w.printBoxLine("  Let's verify everything works!", 61)
@@ -528,7 +641,7 @@ func (w *Wizard) stepComplete() error {
 
 	fmt.Println()
 	fmt.Println(ColorCyan.Sprint("╔" + strings.Repeat("═", 61) + "╗"))
-	w.printBoxLine("                 Setup Complete! 🎉", 61)
+	w.printBoxLine("                 Setup Complete!", 61)
 	fmt.Println(ColorCyan.Sprint("╠" + strings.Repeat("═", 61) + "╣"))
 	w.printBoxLine("", 61)
 	w.printBoxLine("  Email Sentinel is ready to use!", 61)
@@ -547,11 +660,15 @@ func (w *Wizard) stepComplete() error {
 	if w.Config.MobileEnabled {
 		w.printBoxLine(fmt.Sprintf("  ✓ Mobile notifications: enabled (topic: %s)", w.Config.NtfyTopic), 61)
 	}
+	if w.Config.OTPEnabled {
+		w.printBoxLine("  ✓ OTP/2FA detection: enabled", 61)
+	}
 
 	w.printBoxLine("", 61)
 	w.printBoxLine("  Quick commands:", 61)
 	w.printBoxLine("  • email-sentinel start       Start monitoring", 61)
 	w.printBoxLine("  • email-sentinel start --tray Run in system tray", 61)
+	w.printBoxLine("  • email-sentinel otp list    View OTP codes", 61)
 	w.printBoxLine("  • email-sentinel filter add  Add more filters", 61)
 	w.printBoxLine("  • email-sentinel             Open interactive menu", 61)
 	w.printBoxLine("", 61)
@@ -575,7 +692,7 @@ func (w *Wizard) stepComplete() error {
 // printStepHeader prints the current step
 func (w *Wizard) printStepHeader(title string, step int) {
 	fmt.Println()
-	ColorCyan.Printf("═══ Email Sentinel Setup ═══ Step %d/6: %s\n", step+1, title)
+	ColorCyan.Printf("═══ Email Sentinel Setup ═══ Step %d/7: %s\n", step+1, title)
 	fmt.Println()
 }
 

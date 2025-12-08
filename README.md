@@ -22,6 +22,7 @@ Waiting for important emails (job opportunities, client responses, urgent messag
 - **Filter Labels/Categories**: Organize filters with reusable labels (work, personal, urgent, etc.)
 - **AND/OR Logic**: Configure whether all conditions must match or any condition triggers
 - **Smart Priority Rules**: YAML-based rules engine for automatic priority classification
+- **OTP/2FA Code Detection**: Automatically extract and manage verification codes from emails
 - **Low Resource**: Lightweight polling with configurable intervals
 - **Secure**: OAuth 2.0 authentication, credentials stored locally
 - **No Cost**: Uses Gmail API free tier (1B quota units/day)
@@ -38,6 +39,7 @@ Waiting for important emails (job opportunities, client responses, urgent messag
 - **View Past Alerts**: Review missed notifications with `email-sentinel alerts`
 - **Direct Gmail Links**: Click any alert to open the email directly in Gmail
 - **Priority Indicators**: Visual distinction between normal and urgent emails (🔥 vs 📧)
+- **OTP Code Management**: View, copy, and manage 2FA codes with `email-sentinel otp` commands
 
 ## 📋 Table of Contents
 
@@ -49,6 +51,7 @@ Waiting for important emails (job opportunities, client responses, urgent messag
 - [Filter Examples](#filter-examples)
 - [Filter Labels](#filter-labels)
 - [Priority Rules](#priority-rules)
+- [OTP/2FA Code Detection](#otp2fa-code-detection)
 - [Alert History](#alert-history)
 - [System Tray](#system-tray)
 - [Mobile Notifications](#mobile-notifications)
@@ -167,8 +170,9 @@ On first run, the setup wizard automatically guides you through complete configu
 2. **Gmail Authentication** - OAuth 2.0 flow with browser authorization
 3. **Create First Filter** - Interactive filter creation with examples and validation
 4. **Notification Setup** - Configure desktop and/or mobile push notifications
-5. **Test & Verify** - Send test notifications and verify Gmail connection
-6. **Complete** - Summary and quick command reference
+5. **OTP/2FA Setup** - Configure automatic extraction of verification codes from emails
+6. **Test & Verify** - Send test notifications and verify Gmail connection
+7. **Complete** - Summary and quick command reference
 
 The wizard can be re-run anytime from the main menu (Option 6).
 
@@ -652,6 +656,137 @@ When an email matches a filter, the priority engine evaluates:
 **Priority Indicators:**
 - 🔥 High priority (1) - Red icon, urgent notification sound
 - 📧 Normal priority (0) - Standard icon and sound
+
+## 🔐 OTP/2FA Code Detection
+
+Email Sentinel automatically detects and extracts one-time passwords (OTP) and two-factor authentication (2FA) codes from your emails.
+
+### Features
+
+- **Automatic Detection**: Extracts OTP codes from Gmail, GitHub, Amazon, PayPal, and 15+ other services
+- **Smart Pattern Matching**: 10 built-in patterns with confidence scoring
+- **False Positive Prevention**: Filters out invoice numbers, phone numbers, and sequential digits
+- **Auto-Expiry**: Codes automatically expire after 5 minutes (configurable)
+- **Clipboard Integration**: Copy codes instantly with auto-clear for security
+- **Database Storage**: View recent codes even if you missed the email
+
+### Quick Start
+
+The setup wizard (Step 5) guides you through OTP configuration, or configure manually:
+
+```bash
+# Enable OTP detection (done automatically by wizard)
+# Config saved to: otp_rules.yaml in config directory
+
+# View recent OTP codes
+email-sentinel otp list
+
+# Get most recent code and copy to clipboard
+email-sentinel otp get
+
+# Test OTP detection
+email-sentinel otp test "Your verification code is 482716"
+```
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `email-sentinel otp list` | List recent OTP codes |
+| `email-sentinel otp list --active` | Show only active (non-expired) codes |
+| `email-sentinel otp get` | Get most recent code and copy to clipboard |
+| `email-sentinel otp clear` | Clear expired codes from database |
+| `email-sentinel otp test <text>` | Test OTP extraction on sample text |
+
+### Example Output
+
+```bash
+$ email-sentinel otp list --active
+
+🔐 Active OTP Codes (2 total)
+
+[1] 🔐 849372 (Confidence: 1.00)
+    From: noreply@github.com
+    Received: 2 minutes ago
+    Expires: in 3 minutes
+    Source: subject
+    ✓ Copied to clipboard
+
+[2] 🔐 482716 (Confidence: 0.95)
+    From: accounts.google.com
+    Received: 4 minutes ago
+    Expires: in 1 minute
+    Source: body
+```
+
+### Configuration
+
+OTP rules are stored in `otp_rules.yaml` (auto-created by wizard):
+
+**Location:**
+- Windows: `%APPDATA%\email-sentinel\otp_rules.yaml`
+- macOS: `~/Library/Application Support/email-sentinel/otp_rules.yaml`
+- Linux: `~/.config/email-sentinel/otp_rules.yaml`
+
+**Example Configuration:**
+
+```yaml
+enabled: true
+expiry_duration: "5m"
+confidence_threshold: 0.7
+auto_copy_to_clipboard: false
+clipboard_auto_clear: "2m"
+
+# Sender domains known to send OTP codes
+# Emails from these get higher confidence scores
+trusted_otp_senders:
+  - accounts.google.com
+  - noreply@github.com
+  - amazon.com
+  - paypal.com
+  - microsoft.com
+  - apple.com
+
+# Custom patterns (advanced)
+custom_patterns:
+  - name: "my_bank_code"
+    regex: "Bank code: ([0-9]{6})"
+    confidence: 0.9
+```
+
+### How It Works
+
+1. **Email arrives** matching your filters
+2. **OTP detector** scans subject, snippet, and body
+3. **Pattern matching** against 10 built-in patterns
+4. **Confidence scoring** (0.0-1.0) based on:
+   - Pattern match strength
+   - Trusted sender bonus (+0.1)
+   - OTP context keywords (+0.1)
+5. **False positive check** (rejects sequential/repeating digits)
+6. **Database storage** with auto-expiry timestamp
+7. **Notification** (optional) when OTP detected
+
+### Supported Services
+
+Email Sentinel recognizes OTP codes from:
+
+- Google/Gmail
+- GitHub
+- Microsoft/Outlook
+- Amazon
+- PayPal
+- Apple
+- Banking institutions
+- Any service using standard OTP formats
+
+### Security Features
+
+- **Auto-Expiry**: Codes expire after 5 minutes by default
+- **Secure Clipboard**: Auto-clear after 2 minutes when using clipboard copy
+- **Local Storage**: All codes stored locally in SQLite, never transmitted
+- **Pattern Validation**: Rejects sequential (123456) and repeating (111111) numbers
+- **Context-Aware**: Only extracts from emails with verification keywords
 
 ## 📜 Alert History
 

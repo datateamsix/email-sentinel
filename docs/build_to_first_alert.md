@@ -16,12 +16,14 @@ This guide walks you through the complete process from building Email Sentinel t
 5. [Step 4: Initialize & Authenticate](#step-4-initialize--authenticate)
 6. [Step 5: Create Your First Filter](#step-5-create-your-first-filter)
 7. [Step 6: Set Up Priority Rules](#step-6-set-up-priority-rules)
-8. [Step 7: Test Notifications](#step-7-test-notifications)
-9. [Step 8: Start Monitoring](#step-8-start-monitoring)
-10. [Step 9: Trigger Your First Alert](#step-9-trigger-your-first-alert)
-11. [Step 10: View Alert History](#step-10-view-alert-history)
-12. [Step 11: Set Up Auto-Start](#step-11-set-up-auto-start)
-13. [Troubleshooting](#troubleshooting)
+8. [Step 7: Configure OTP/2FA Detection](#step-7-configure-otp2fa-detection)
+9. [Step 8: Test Notifications](#step-8-test-notifications)
+10. [Step 9: Start Monitoring](#step-9-start-monitoring)
+11. [Step 10: Trigger Your First Alert](#step-10-trigger-your-first-alert)
+12. [Step 11: View Alert History & OTP Codes](#step-11-view-alert-history--otp-codes)
+13. [Step 12: Set Up Auto-Start](#step-12-set-up-auto-start)
+14. [Step 13: Verify Auto-Start Configuration](#step-13-verify-auto-start-configuration)
+15. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -451,7 +453,151 @@ notification_settings:
 
 ---
 
-## Step 7: Test Notifications
+## Step 7: Configure OTP/2FA Detection
+
+Email Sentinel can automatically detect and extract one-time passwords (OTP) and two-factor authentication codes from your emails.
+
+### What is OTP Detection?
+
+- **Automatically extracts** verification codes from emails (Google, GitHub, Amazon, etc.)
+- **Stores codes** in database with auto-expiry (default: 5 minutes)
+- **Clipboard integration** - copy codes instantly
+- **Smart filtering** - rejects false positives like invoice numbers
+
+### Configure OTP Rules
+
+The setup wizard (run with `email-sentinel` command) includes an OTP configuration step, or you can configure manually:
+
+**Location of config file:**
+- Windows: `%APPDATA%\email-sentinel\otp_rules.yaml`
+- macOS: `~/Library/Application Support/email-sentinel/otp_rules.yaml`
+- Linux: `~/.config/email-sentinel/otp_rules.yaml`
+
+**Windows (PowerShell):**
+```powershell
+# Edit OTP rules
+notepad $env:APPDATA\email-sentinel\otp_rules.yaml
+```
+
+**Windows (CMD):**
+```cmd
+notepad %APPDATA%\email-sentinel\otp_rules.yaml
+```
+
+**macOS:**
+```bash
+# Create/edit OTP rules
+open ~/Library/Application\ Support/email-sentinel/otp_rules.yaml
+```
+
+**Linux:**
+```bash
+# Create/edit OTP rules
+nano ~/.config/email-sentinel/otp_rules.yaml
+# or
+vim ~/.config/email-sentinel/otp_rules.yaml
+```
+
+### Example OTP Configuration
+
+```yaml
+# Enable/disable OTP detection
+enabled: true
+
+# How long OTP codes remain active before expiring
+expiry_duration: "5m"
+
+# Minimum confidence score to treat as valid OTP (0.0 to 1.0)
+# Higher = fewer false positives, but might miss some codes
+confidence_threshold: 0.7
+
+# Auto-copy most recent OTP to clipboard when detected
+auto_copy_to_clipboard: false
+
+# Auto-clear clipboard after this duration (security feature)
+clipboard_auto_clear: "2m"
+
+# Sender domains known to send OTP codes
+# Emails from these domains get higher confidence scores
+trusted_otp_senders:
+  - accounts.google.com
+  - noreply@github.com
+  - amazon.com
+  - microsoft.com
+  - paypal.com
+  - apple.com
+  - noreply@
+  - no-reply@
+
+# Custom OTP patterns (advanced users, optional)
+custom_patterns:
+  # Example: Match codes like "Code: ABC123"
+  - name: "custom_alphanumeric"
+    regex: "Code:\\s*([A-Z0-9]{6})"
+    confidence: 0.8
+```
+
+### Test OTP Detection
+
+**Windows:**
+```powershell
+# Test with a sample verification email text
+.\email-sentinel.exe otp test "Your verification code is 482716"
+```
+
+**macOS/Linux:**
+```bash
+# Test with a sample verification email text
+./email-sentinel otp test "Your verification code is 482716"
+```
+
+**Expected output:**
+```
+Testing text: Your verification code is 482716
+
+✅ OTP Detected: 482716
+Confidence: 1.00
+Pattern: your_code_is
+Source: text
+```
+
+**Note:** Sequential numbers like `123456` are intentionally rejected as false positives for security.
+
+### OTP Commands Quick Reference
+
+**Windows:**
+```powershell
+# View recent OTP codes
+.\email-sentinel.exe otp list
+
+# View only active (non-expired) codes
+.\email-sentinel.exe otp list --active
+
+# Get most recent OTP and copy to clipboard
+.\email-sentinel.exe otp get
+
+# Clear expired codes
+.\email-sentinel.exe otp clear
+```
+
+**macOS/Linux:**
+```bash
+# View recent OTP codes
+./email-sentinel otp list
+
+# View only active (non-expired) codes
+./email-sentinel otp list --active
+
+# Get most recent OTP and copy to clipboard
+./email-sentinel otp get
+
+# Clear expired codes
+./email-sentinel otp clear
+```
+
+---
+
+## Step 8: Test Notifications
 
 Before starting monitoring, verify notifications work.
 
@@ -520,7 +666,7 @@ Before starting monitoring, verify notifications work.
 
 ---
 
-## Step 8: Start Monitoring
+## Step 9: Start Monitoring
 
 Now start Email Sentinel to monitor your inbox.
 
@@ -570,7 +716,7 @@ Now start Email Sentinel to monitor your inbox.
 
 ---
 
-## Step 9: Trigger Your First Alert
+## Step 10: Trigger Your First Alert
 
 Now let's trigger an alert by sending yourself an email.
 
@@ -617,9 +763,9 @@ You should receive:
 
 ---
 
-## Step 10: View Alert History
+## Step 11: View Alert History & OTP Codes
 
-All alerts are saved to a SQLite database.
+All alerts and OTP codes are saved to a SQLite database.
 
 ### View Today's Alerts
 
@@ -663,9 +809,54 @@ All alerts are saved to a SQLite database.
 - Paste into browser
 - Gmail opens directly to that email
 
+### View OTP Codes
+
+If Email Sentinel detected any OTP/2FA codes from emails, you can view them:
+
+**Windows:**
+```powershell
+# View all recent OTP codes
+.\email-sentinel.exe otp list
+
+# View only active (non-expired) codes
+.\email-sentinel.exe otp list --active
+```
+
+**macOS/Linux:**
+```bash
+# View all recent OTP codes
+./email-sentinel otp list
+
+# View only active (non-expired) codes
+./email-sentinel otp list --active
+```
+
+**Example output:**
+```
+🔐 Active OTP Codes (1 total)
+
+[1] 🔐 482716 (Confidence: 1.00)
+    From: noreply@github.com
+    Received: 2 minutes ago
+    Expires: in 3 minutes
+    Source: subject
+```
+
+**Get most recent OTP and copy to clipboard:**
+
+**Windows:**
+```powershell
+.\email-sentinel.exe otp get
+```
+
+**macOS/Linux:**
+```bash
+./email-sentinel otp get
+```
+
 ---
 
-## Step 11: Set Up Auto-Start
+## Step 12: Set Up Auto-Start
 
 Make Email Sentinel start automatically when your computer boots.
 
@@ -743,6 +934,202 @@ ps aux | grep email-sentinel
 
 ---
 
+## Step 13: Verify Auto-Start Configuration
+
+Ensure Email Sentinel is properly configured to start automatically on system boot.
+
+### Check Windows Task Scheduler
+
+**Windows (PowerShell):**
+```powershell
+# Check if EmailSentinel task exists
+Get-ScheduledTask -TaskName "EmailSentinel" | Format-List
+
+# View task details
+Get-ScheduledTask -TaskName "EmailSentinel" | Select-Object TaskName,State,TaskPath
+
+# Check if task is enabled
+$task = Get-ScheduledTask -TaskName "EmailSentinel"
+if ($task.State -eq "Ready") {
+    Write-Host "✅ Task is enabled and ready" -ForegroundColor Green
+} else {
+    Write-Host "❌ Task state: $($task.State)" -ForegroundColor Red
+}
+```
+
+**Windows (Task Scheduler GUI):**
+```powershell
+# Open Task Scheduler GUI
+taskschd.msc
+
+# Navigate to: Task Scheduler Library
+# Look for: "EmailSentinel" task
+# Verify:
+#   - Status should be "Ready"
+#   - Trigger should be "At log on"
+#   - Action should point to your email-sentinel.exe
+```
+
+**Windows (CMD):**
+```cmd
+schtasks /query /tn EmailSentinel /v /fo list
+```
+
+### Check macOS LaunchAgent
+
+**macOS:**
+```bash
+# Check if LaunchAgent exists
+ls -la ~/Library/LaunchAgents/com.email-sentinel.plist
+
+# Check if service is loaded
+launchctl list | grep email-sentinel
+
+# View service status
+launchctl print gui/$(id -u)/com.email-sentinel
+
+# If loaded, you should see status information
+# If not loaded, manually load it:
+launchctl load ~/Library/LaunchAgents/com.email-sentinel.plist
+```
+
+### Check Linux Systemd Service
+
+**Linux:**
+```bash
+# Check if service file exists
+ls -la ~/.config/systemd/user/email-sentinel.service
+
+# Check service status
+systemctl --user status email-sentinel
+
+# Expected output should show:
+#   Active: active (running)
+#   Loaded: loaded
+#   Enabled: enabled
+
+# If not enabled, enable it:
+systemctl --user enable email-sentinel
+
+# If not started, start it:
+systemctl --user start email-sentinel
+
+# View service logs
+journalctl --user -u email-sentinel -f
+```
+
+### Verify Process is Running
+
+After reboot, verify Email Sentinel is actually running:
+
+**Windows (PowerShell):**
+```powershell
+# Check for running process
+Get-Process | Where-Object {$_.Name -like "*email-sentinel*"} | Format-Table Name,Id,StartTime
+
+# Alternative using tasklist
+tasklist | findstr /i email-sentinel
+
+# Check if system tray icon is present
+# Look in Windows notification area (bottom-right)
+```
+
+**macOS:**
+```bash
+# Check for running process
+ps aux | grep email-sentinel | grep -v grep
+
+# Check system tray/menu bar
+# Look for Email Sentinel icon in menu bar (top-right)
+
+# Alternative using pgrep
+pgrep -fl email-sentinel
+```
+
+**Linux:**
+```bash
+# Check for running process
+ps aux | grep email-sentinel | grep -v grep
+
+# Alternative using pgrep
+pgrep -fl email-sentinel
+
+# Check system tray
+# Look for Email Sentinel icon in system tray
+```
+
+### Troubleshooting Auto-Start
+
+**Problem: Task exists but Email Sentinel isn't running**
+
+**Windows:**
+```powershell
+# Manually run the task to see errors
+Start-ScheduledTask -TaskName "EmailSentinel"
+
+# Check task history
+Get-ScheduledTask -TaskName "EmailSentinel" | Get-ScheduledTaskInfo
+
+# Verify executable path in task
+$task = Get-ScheduledTask -TaskName "EmailSentinel"
+$task.Actions[0].Execute
+```
+
+**macOS:**
+```bash
+# Check LaunchAgent logs
+tail -f ~/Library/Logs/email-sentinel.log
+
+# Manually start to see errors
+launchctl start com.email-sentinel
+
+# Check system log
+log show --predicate 'eventMessage contains "email-sentinel"' --last 1h
+```
+
+**Linux:**
+```bash
+# Check service logs for errors
+journalctl --user -u email-sentinel -n 50
+
+# Manually start to see errors
+systemctl --user start email-sentinel
+
+# Check service status details
+systemctl --user status email-sentinel -l
+```
+
+**Problem: Auto-start not working after reboot**
+
+1. **Verify the service/task is enabled**
+2. **Check file permissions** on the executable
+3. **Ensure absolute paths** are used in configuration
+4. **Test manual start** first before relying on auto-start
+
+**Windows:**
+```powershell
+# Re-install the task
+.\email-sentinel.exe uninstall
+.\email-sentinel.exe install
+```
+
+**macOS:**
+```bash
+# Unload and reload LaunchAgent
+launchctl unload ~/Library/LaunchAgents/com.email-sentinel.plist
+launchctl load ~/Library/LaunchAgents/com.email-sentinel.plist
+```
+
+**Linux:**
+```bash
+# Reload systemd configuration
+systemctl --user daemon-reload
+systemctl --user enable email-sentinel
+systemctl --user restart email-sentinel
+```
+
+---
+
 ## Congratulations! 🎉
 
 You've successfully set up Email Sentinel from build to first alert!
@@ -753,10 +1140,12 @@ You've successfully set up Email Sentinel from build to first alert!
 - ✅ Configured Gmail API authentication
 - ✅ Created email filters
 - ✅ Set up priority rules
+- ✅ Configured OTP/2FA code detection
 - ✅ Tested all notification systems
 - ✅ Received your first alert
-- ✅ Viewed alert history
+- ✅ Viewed alert history and OTP codes
 - ✅ Configured auto-start
+- ✅ Verified auto-start configuration
 
 ### Next Steps:
 

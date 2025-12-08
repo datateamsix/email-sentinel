@@ -1,5 +1,7 @@
 # 🚀 Complete Setup Guide: Build to First Alert
 
+![Email Sentinel Logo](../images/logo.png)
+
 This guide walks you through the complete process from building Email Sentinel to receiving your first email notification.
 
 **Time Required:** ~15-20 minutes

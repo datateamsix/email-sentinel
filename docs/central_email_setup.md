@@ -1,5 +1,7 @@
 # 📨 Setting Up Your Central Email Account (Collector Inbox)
 
+![Email Sentinel Logo](../images/logo.png)
+
 Email Sentinel works best when all important email flows into one central Gmail account.
 
 You can use:

@@ -1,5 +1,7 @@
 # 🔐 Gmail API & Google Cloud Platform Setup
 
+![Email Sentinel Logo](../images/logo.png)
+
 Complete step-by-step guide to setting up Gmail API access for Email Sentinel.
 
 **Time Required:** ~10 minutes

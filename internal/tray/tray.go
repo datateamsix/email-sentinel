@@ -172,9 +172,14 @@ func (app *TrayApp) addAlertMenuItem(alert storage.Alert) {
 		}
 	}
 
-	// Set icon: OTP takes precedence, then priority, then default
+	// Check if this alert has an AI summary
+	hasAISummary := alert.AISummary != nil
+
+	// Set icon: OTP takes precedence, then AI summary, then priority, then default
 	if isOTP {
 		icon = "🔐" // Lock icon for OTP messages
+	} else if hasAISummary {
+		icon = "🤖" // AI icon for summarized emails
 	} else if alert.Priority == 1 {
 		icon = "🔥" // Fire icon for high priority
 	}
@@ -193,10 +198,39 @@ func (app *TrayApp) addAlertMenuItem(alert storage.Alert) {
 
 	title := fmt.Sprintf("%s [%s] %s", icon, timeStr, subject)
 
-	// Enhanced tooltip with filter info
+	// Enhanced tooltip with filter info and AI summary
 	tooltip := fmt.Sprintf("From: %s\nFilter: %s\nClick to open in Gmail", alert.Sender, alert.FilterName)
 	if isOTP {
 		tooltip = fmt.Sprintf("🔐 OTP Message\nFrom: %s\nFilter: %s\nClick to open in Gmail", alert.Sender, alert.FilterName)
+	}
+
+	// Add AI summary to tooltip if available
+	if hasAISummary && alert.AISummary != nil {
+		tooltip += fmt.Sprintf("\n\n🤖 AI Summary:\n%s", alert.AISummary.Summary)
+
+		if len(alert.AISummary.Questions) > 0 {
+			tooltip += fmt.Sprintf("\n\n❓ Questions (%d):", len(alert.AISummary.Questions))
+			for i, q := range alert.AISummary.Questions {
+				if i < 3 { // Show max 3 questions in tooltip
+					tooltip += fmt.Sprintf("\n  • %s", q)
+				}
+			}
+			if len(alert.AISummary.Questions) > 3 {
+				tooltip += fmt.Sprintf("\n  ... and %d more", len(alert.AISummary.Questions)-3)
+			}
+		}
+
+		if len(alert.AISummary.ActionItems) > 0 {
+			tooltip += fmt.Sprintf("\n\n✅ Action Items (%d):", len(alert.AISummary.ActionItems))
+			for i, item := range alert.AISummary.ActionItems {
+				if i < 3 { // Show max 3 action items in tooltip
+					tooltip += fmt.Sprintf("\n  • %s", item)
+				}
+			}
+			if len(alert.AISummary.ActionItems) > 3 {
+				tooltip += fmt.Sprintf("\n  ... and %d more", len(alert.AISummary.ActionItems)-3)
+			}
+		}
 	}
 
 	menuItem := mRecentAlerts.AddSubMenuItem(title, tooltip)

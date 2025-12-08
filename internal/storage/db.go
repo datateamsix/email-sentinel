@@ -22,8 +22,9 @@ type Alert struct {
 	MessageID    string
 	GmailLink    string
 	FilterName   string
-	FilterLabels []string // Filter categories (not stored in DB, populated at runtime)
+	FilterLabels []string      // Filter categories (not stored in DB, populated at runtime)
 	Priority     int
+	AISummary    *EmailSummary // AI-generated summary (optional, loaded from ai_summaries table)
 }
 
 // OTPAlert represents an OTP code extracted from an email
@@ -184,6 +185,16 @@ func GetRecentAlerts(db *sql.DB, limit int) ([]Alert, error) {
 	if err := PopulateFilterLabels(alerts); err != nil {
 		// Log error but don't fail - alerts can still be shown
 		fmt.Printf("Warning: Could not populate filter labels: %v\n", err)
+	}
+
+	// Load AI summaries for each alert (if available)
+	for i := range alerts {
+		summary, err := GetAISummaryByMessageID(db, alerts[i].MessageID)
+		if err != nil {
+			// Log error but don't fail
+			fmt.Printf("Warning: Could not load AI summary for %s: %v\n", alerts[i].MessageID, err)
+		}
+		alerts[i].AISummary = summary
 	}
 
 	return alerts, nil
@@ -620,4 +631,223 @@ func containsSubstring(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// ======================================
+// AI Summary Functions
+// ======================================
+
+// EmailSummary represents an AI-generated summary
+type EmailSummary struct {
+	ID          int64
+	MessageID   string
+	Summary     string
+	Questions   []string
+	ActionItems []string
+	Provider    string
+	Model       string
+	GeneratedAt time.Time
+	TokensUsed  int
+}
+
+// InsertAISummary saves an AI-generated summary to the database
+func InsertAISummary(db *sql.DB, summary *EmailSummary) error {
+	// Convert slices to JSON strings for storage
+	questionsJSON := "[]"
+	if len(summary.Questions) > 0 {
+		bytes, err := jsonMarshalStringSlice(summary.Questions)
+		if err != nil {
+			return fmt.Errorf("failed to marshal questions: %w", err)
+		}
+		questionsJSON = string(bytes)
+	}
+
+	actionItemsJSON := "[]"
+	if len(summary.ActionItems) > 0 {
+		bytes, err := jsonMarshalStringSlice(summary.ActionItems)
+		if err != nil {
+			return fmt.Errorf("failed to marshal action_items: %w", err)
+		}
+		actionItemsJSON = string(bytes)
+	}
+
+	query := `
+		INSERT INTO ai_summaries (message_id, summary, questions, action_items, provider, model, generated_at, tokens_used)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`
+
+	result, err := db.Exec(
+		query,
+		summary.MessageID,
+		summary.Summary,
+		questionsJSON,
+		actionItemsJSON,
+		summary.Provider,
+		summary.Model,
+		summary.GeneratedAt.Unix(),
+		summary.TokensUsed,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to insert AI summary: %w", err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return fmt.Errorf("failed to get insert ID: %w", err)
+	}
+
+	summary.ID = id
+	return nil
+}
+
+// GetAISummaryByMessageID retrieves an AI summary for a specific message
+func GetAISummaryByMessageID(db *sql.DB, messageID string) (*EmailSummary, error) {
+	query := `
+		SELECT id, message_id, summary, questions, action_items, provider, model, generated_at, tokens_used
+		FROM ai_summaries
+		WHERE message_id = ?
+	`
+
+	var summary EmailSummary
+	var generatedAt int64
+	var questionsJSON, actionItemsJSON string
+
+	err := db.QueryRow(query, messageID).Scan(
+		&summary.ID,
+		&summary.MessageID,
+		&summary.Summary,
+		&questionsJSON,
+		&actionItemsJSON,
+		&summary.Provider,
+		&summary.Model,
+		&generatedAt,
+		&summary.TokensUsed,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil // No summary found
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to query AI summary: %w", err)
+	}
+
+	summary.GeneratedAt = time.Unix(generatedAt, 0)
+
+	// Parse JSON strings back to slices
+	if err := jsonUnmarshalStringSlice(questionsJSON, &summary.Questions); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal questions: %w", err)
+	}
+	if err := jsonUnmarshalStringSlice(actionItemsJSON, &summary.ActionItems); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal action_items: %w", err)
+	}
+
+	return &summary, nil
+}
+
+// Helper functions for JSON marshaling/unmarshaling string slices
+func jsonMarshalStringSlice(slice []string) ([]byte, error) {
+	if slice == nil {
+		slice = []string{}
+	}
+	result := "["
+	for i, s := range slice {
+		if i > 0 {
+			result += ","
+		}
+		// Simple JSON string escaping
+		escaped := ""
+		for _, ch := range s {
+			switch ch {
+			case '"':
+				escaped += "\\\""
+			case '\\':
+				escaped += "\\\\"
+			case '\n':
+				escaped += "\\n"
+			case '\r':
+				escaped += "\\r"
+			case '\t':
+				escaped += "\\t"
+			default:
+				escaped += string(ch)
+			}
+		}
+		result += "\"" + escaped + "\""
+	}
+	result += "]"
+	return []byte(result), nil
+}
+
+func jsonUnmarshalStringSlice(jsonStr string, dest *[]string) error {
+	// Simple JSON array parser
+	if jsonStr == "" || jsonStr == "[]" {
+		*dest = []string{}
+		return nil
+	}
+
+	// Remove brackets
+	if len(jsonStr) < 2 || jsonStr[0] != '[' || jsonStr[len(jsonStr)-1] != ']' {
+		return fmt.Errorf("invalid JSON array format")
+	}
+
+	content := jsonStr[1 : len(jsonStr)-1]
+	if content == "" {
+		*dest = []string{}
+		return nil
+	}
+
+	// Parse strings
+	var result []string
+	inString := false
+	escaped := false
+	current := ""
+
+	for i := 0; i < len(content); i++ {
+		ch := content[i]
+
+		if escaped {
+			switch ch {
+			case 'n':
+				current += "\n"
+			case 'r':
+				current += "\r"
+			case 't':
+				current += "\t"
+			case '"':
+				current += "\""
+			case '\\':
+				current += "\\"
+			default:
+				current += string(ch)
+			}
+			escaped = false
+			continue
+		}
+
+		if ch == '\\' {
+			escaped = true
+			continue
+		}
+
+		if ch == '"' {
+			if inString {
+				// End of string
+				result = append(result, current)
+				current = ""
+				inString = false
+			} else {
+				// Start of string
+				inString = true
+			}
+			continue
+		}
+
+		if inString {
+			current += string(ch)
+		}
+	}
+
+	*dest = result
+	return nil
 }

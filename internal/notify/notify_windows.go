@@ -26,9 +26,10 @@ const (
 //
 // Behavior:
 //   - Title: Email subject
-//   - Body: "From: <sender>"
+//   - Body: "From: <sender>" + AI summary (if available)
 //   - Clicking opens the Gmail link in default browser
 //   - Priority 1 emails use an urgent visual style
+//   - AI-summarized emails show 🤖 icon and summary
 func SendAlertNotification(a storage.Alert) error {
 	// Build message with filter labels if present
 	message := fmt.Sprintf("From: %s", a.Sender)
@@ -54,8 +55,34 @@ func SendAlertNotification(a storage.Alert) error {
 		Audio: toast.Default, // System default notification sound
 	}
 
-	// Add snippet as additional context if available
-	if a.Snippet != "" {
+	// Prioritize AI summary over snippet if available
+	if a.AISummary != nil && a.AISummary.Summary != "" {
+		// Use AI summary instead of snippet
+		aiMessage := message + "\n\n🤖 " + a.AISummary.Summary
+
+		// Add questions if present (max 2 for space)
+		if len(a.AISummary.Questions) > 0 {
+			aiMessage += "\n\n❓ "
+			if len(a.AISummary.Questions) == 1 {
+				aiMessage += a.AISummary.Questions[0]
+			} else {
+				aiMessage += fmt.Sprintf("%s (+ %d more)", a.AISummary.Questions[0], len(a.AISummary.Questions)-1)
+			}
+		}
+
+		// Add action items if present (max 2 for space)
+		if len(a.AISummary.ActionItems) > 0 {
+			aiMessage += "\n✅ "
+			if len(a.AISummary.ActionItems) == 1 {
+				aiMessage += a.AISummary.ActionItems[0]
+			} else {
+				aiMessage += fmt.Sprintf("%s (+ %d more)", a.AISummary.ActionItems[0], len(a.AISummary.ActionItems)-1)
+			}
+		}
+
+		notification.Message = aiMessage
+	} else if a.Snippet != "" {
+		// Fall back to snippet if no AI summary
 		snippet := a.Snippet
 		// Truncate snippet if too long (Windows toast has character limits)
 		if len(snippet) > 120 { // Reduced from 150 to account for labels

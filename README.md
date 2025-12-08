@@ -27,6 +27,7 @@ Waiting for important emails (job opportunities, client responses, urgent messag
 - **Filter Labels/Categories**: Organize filters with reusable labels (work, personal, urgent, etc.)
 - **AND/OR Logic**: Configure whether all conditions must match or any condition triggers
 - **Smart Priority Rules**: YAML-based rules engine for automatic priority classification
+- **AI Email Summaries**: Optional AI-powered summaries with questions/actions (Claude, OpenAI, Gemini)
 - **OTP/2FA Code Detection**: Automatically extract and manage verification codes from emails
 - **Low Resource**: Lightweight polling with configurable intervals
 - **Secure**: OAuth 2.0 authentication, credentials stored locally
@@ -34,10 +35,11 @@ Waiting for important emails (job opportunities, client responses, urgent messag
 
 ### Notifications
 - **Desktop Notifications**: Native OS notifications (Windows, macOS, Linux) with filter labels
-- **Windows Toast Notifications**: Rich, clickable notifications in Action Center with Gmail links and labels
+- **Windows Toast Notifications**: Rich, clickable notifications in Action Center with Gmail links, labels, and AI summaries
 - **Mobile Push**: Free push notifications to iPhone/Android via [ntfy.sh](https://ntfy.sh) with label tags
-- **System Tray**: Background app with tray icon showing recent alerts (Windows/macOS/Linux)
+- **System Tray**: Background app with tray icon showing recent alerts with AI summaries (Windows/macOS/Linux)
 - **Label Display**: All notifications show filter labels for easy categorization
+- **AI-Enhanced**: Notifications show AI summaries, questions, and action items when enabled
 
 ### Alert Management
 - **Alert History**: SQLite database stores all alerts with automatic daily cleanup
@@ -56,6 +58,7 @@ Waiting for important emails (job opportunities, client responses, urgent messag
 - [Filter Examples](#filter-examples)
 - [Filter Labels](#filter-labels)
 - [Priority Rules](#priority-rules)
+- [AI Email Summaries](#ai-email-summaries)
 - [OTP/2FA Code Detection](#otp2fa-code-detection)
 - [Alert History](#alert-history)
 - [System Tray](#system-tray)
@@ -192,13 +195,19 @@ sudo mv email-sentinel /usr/local/bin/
 ./email-sentinel test desktop
 ./email-sentinel test toast          # Windows only - test Action Center
 
-# 5. Start monitoring with system tray
-./email-sentinel start --tray        # Recommended for background use
+# 5. (Optional) Enable AI summaries - see AI Email Summaries section
+# Get free Gemini API key: https://makersuite.google.com/app/apikey
+# Set: GEMINI_API_KEY environment variable
+# Edit: ai-config.yaml and set enabled: true
 
-# 6. View alert history
+# 6. Start monitoring with system tray
+./email-sentinel start --tray        # Recommended for background use
+./email-sentinel start --tray --ai-summary  # With AI summaries
+
+# 7. View alert history
 ./email-sentinel alerts
 
-# 7. Install auto-startup (optional)
+# 8. Install auto-startup (optional)
 ./email-sentinel install
 ```
 
@@ -438,13 +447,21 @@ email-sentinel start
 # With system tray icon (recommended)
 email-sentinel start --tray
 
+# With AI summaries enabled
+email-sentinel start --tray --ai-summary
+
 # As daemon (background)
 email-sentinel start --daemon
+
+# With auto-cleanup of old alerts (every 60 minutes by default)
+email-sentinel start --tray --cleanup-interval 60
 ```
 
 **Flags:**
 - `--tray` / `-t` - Run with system tray icon
 - `--daemon` / `-d` - Run as background daemon
+- `--ai-summary` - Enable AI-powered email summaries
+- `--cleanup-interval` - Auto-cleanup interval in minutes (0=disabled, default=60)
 
 ### `stop`
 
@@ -714,6 +731,168 @@ When an email matches a filter, the priority engine evaluates:
 **Priority Indicators:**
 - 🔥 High priority (1) - Red icon, urgent notification sound
 - 📧 Normal priority (0) - Standard icon and sound
+
+## 🤖 AI Email Summaries
+
+Email Sentinel can generate AI-powered summaries of your emails, helping you quickly understand what's important without reading the full message.
+
+### Features
+
+- **Smart Summaries**: Concise overview (max 500 chars) of email content
+- **Question Extraction**: Automatically identifies questions asked in the email
+- **Action Items**: Detects and lists requested actions
+- **Multi-Provider**: Supports Claude (Anthropic), OpenAI, and Google Gemini
+- **Free Tier Available**: Uses Gemini Flash by default (generous free tier)
+- **Smart Caching**: Avoids re-generating summaries for the same email
+- **Rate Limiting**: Built-in cost controls with configurable hourly/daily limits
+- **Non-Blocking**: Summaries generate asynchronously without slowing email monitoring
+
+### Quick Start (FREE with Gemini)
+
+```bash
+# 1. Get free Gemini API key
+# Visit: https://makersuite.google.com/app/apikey
+
+# 2. Set environment variable
+# Windows:
+setx GEMINI_API_KEY "your-api-key-here"
+
+# macOS/Linux:
+export GEMINI_API_KEY="your-api-key-here"
+
+# 3. Enable AI summaries in config
+# Edit: ai-config.yaml
+# Set: enabled: true
+
+# 4. Start with AI summaries
+email-sentinel start --tray --ai-summary
+```
+
+### Configuration
+
+AI summaries are configured via `ai-config.yaml` in your config directory:
+
+**Location:**
+- Windows: `%APPDATA%\email-sentinel\ai-config.yaml`
+- macOS: `~/Library/Application Support/email-sentinel/ai-config.yaml`
+- Linux: `~/.config/email-sentinel/ai-config.yaml`
+
+**Example Configuration:**
+
+```yaml
+ai_summary:
+  enabled: true
+  provider: "gemini"  # Options: claude, openai, gemini (default)
+
+  api:
+    gemini:
+      api_key: ""  # Or set via GEMINI_API_KEY env var
+      model: "gemini-1.5-flash"
+      max_tokens: 1024
+      temperature: 0.3
+
+    claude:
+      api_key: ""  # Or set via ANTHROPIC_API_KEY env var
+      model: "claude-3-5-haiku-20241022"
+
+    openai:
+      api_key: ""  # Or set via OPENAI_API_KEY env var
+      model: "gpt-4o-mini"
+
+  behavior:
+    max_summary_length: 500
+    priority_only: false  # Only summarize high-priority emails
+    enable_cache: true
+    timeout_seconds: 15
+    retry_attempts: 2
+    include_in_notifications: true
+
+  rate_limit:
+    max_per_hour: 60
+    max_per_day: 500
+```
+
+### How It Works
+
+1. **Email arrives** matching your filters
+2. **AI service** generates summary (if enabled)
+3. **Summary includes**:
+   - Brief overview of email content
+   - Key questions asked (if any)
+   - Action items requested (if any)
+4. **Cached in database** to avoid duplicate API calls
+5. **Displayed in**:
+   - Console output: `🤖 AI: <summary>`
+   - Windows toast notifications with questions/actions
+   - System tray tooltips with full details
+
+### Example Output
+
+**Console:**
+```
+📧 MATCH [Job Alert] From: recruiter@linkedin.com | Subject: Senior Engineer Position
+
+🤖 AI: Recruiter inquiring about interest in senior engineering role at TechCorp.
+        Salary: $150-180K, remote-first, strong benefits package.
+
+❓ Questions:
+  • Are you open to new opportunities?
+  • What's your expected salary range?
+
+✅ Action Items:
+  • Review job description link
+  • Reply with availability for phone screen
+```
+
+**Windows Toast Notification:**
+```
+📧 Senior Engineer Position
+
+🏷️ work 🏷️ career
+From: recruiter@linkedin.com
+
+🤖 Recruiter inquiring about senior engineering role...
+
+❓ Are you open to new opportunities? (+ 1 more)
+
+✅ Review job description link (+ 1 more)
+
+[Open Email]
+```
+
+**System Tray:**
+```
+Recent Alerts
+├─ 🤖 [14:30] Senior Engineer Position
+│   Tooltip: Full AI summary with all questions and actions
+├─ 🔐 [14:15] GitHub verification code
+└─ 📧 [13:45] Weekly team meeting
+```
+
+### Provider Comparison
+
+| Provider | Model | Cost (per 1M tokens) | Free Tier | Speed |
+|----------|-------|---------------------|-----------|-------|
+| **Gemini** | Flash | $0 (free tier) | Generous | Very Fast |
+| Claude | Haiku | $0.25 / $1.25 | No | Fast |
+| OpenAI | GPT-4o-mini | $0.15 / $0.60 | No | Fast |
+
+**Recommendation:** Start with Gemini Flash (free) and switch to paid providers if needed.
+
+### Cost Optimization
+
+- **Use Gemini Flash**: Free tier with generous limits
+- **Enable Caching**: Avoid duplicate API calls (`enable_cache: true`)
+- **Priority Only**: Only summarize urgent emails (`priority_only: true`)
+- **Rate Limits**: Set reasonable hourly/daily caps
+- **Timeout Control**: Limit API call duration (`timeout_seconds: 15`)
+
+### Privacy & Security
+
+- **API Keys**: Stored locally via environment variables
+- **No Data Retention**: Email content sent to AI providers for summarization only
+- **Local Caching**: Summaries cached in local SQLite database
+- **Provider Choice**: Choose your preferred AI provider based on privacy needs
 
 ## 🔐 OTP/2FA Code Detection
 

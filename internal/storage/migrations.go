@@ -78,6 +78,7 @@ func RunMigrations(db *sql.DB) error {
 		migrate func(*sql.Tx) error
 	}{
 		{1, "Add OTP alerts table", Migration_001_AddOTPTable},
+		{2, "Add AI summaries table", Migration_002_AddAISummariesTable},
 	}
 
 	// Run each pending migration
@@ -147,6 +148,33 @@ func Migration_001_AddOTPTable(tx *sql.Tx) error {
 
 	if _, err := tx.Exec(schema); err != nil {
 		return fmt.Errorf("failed to create otp_alerts table: %w", err)
+	}
+
+	return nil
+}
+
+// Migration_002_AddAISummariesTable creates the ai_summaries table with indexes
+// This migration is idempotent - safe to run multiple times
+func Migration_002_AddAISummariesTable(tx *sql.Tx) error {
+	schema := `
+		CREATE TABLE IF NOT EXISTS ai_summaries (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			message_id TEXT NOT NULL UNIQUE,
+			summary TEXT NOT NULL,
+			questions TEXT,
+			action_items TEXT,
+			provider TEXT NOT NULL,
+			model TEXT NOT NULL,
+			generated_at INTEGER NOT NULL,
+			tokens_used INTEGER DEFAULT 0
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_summary_message_id ON ai_summaries(message_id);
+		CREATE INDEX IF NOT EXISTS idx_summary_generated_at ON ai_summaries(generated_at DESC);
+	`
+
+	if _, err := tx.Exec(schema); err != nil {
+		return fmt.Errorf("failed to create ai_summaries table: %w", err)
 	}
 
 	return nil

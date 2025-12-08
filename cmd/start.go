@@ -14,6 +14,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/datateamsix/email-sentinel/internal/ai"
 	"github.com/datateamsix/email-sentinel/internal/config"
 	"github.com/datateamsix/email-sentinel/internal/filter"
 	"github.com/datateamsix/email-sentinel/internal/gmail"
@@ -27,6 +28,7 @@ import (
 var daemonMode bool
 var trayMode bool
 var cleanupInterval int // in minutes
+var aiSummaryEnabled bool
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
@@ -55,6 +57,7 @@ func init() {
 	startCmd.Flags().BoolVarP(&daemonMode, "daemon", "d", false, "Run as background daemon")
 	startCmd.Flags().BoolVarP(&trayMode, "tray", "t", false, "Run with system tray icon")
 	startCmd.Flags().IntVar(&cleanupInterval, "cleanup-interval", 60, "Auto-cleanup interval in minutes (0=disabled, default=60)")
+	startCmd.Flags().BoolVar(&aiSummaryEnabled, "ai-summary", false, "Enable AI-powered email summaries")
 }
 
 func runStart(cmd *cobra.Command, args []string) {
@@ -142,6 +145,21 @@ func runStart(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
+	// Initialize AI service if enabled
+	var aiService *ai.Service
+	if aiSummaryEnabled {
+		aiConfig, err := ai.LoadConfig()
+		if err != nil {
+			fmt.Printf("⚠️  AI summary disabled: %v\n", err)
+			fmt.Println("   Tip: Create ai-config.yaml or set API key environment variable")
+		} else {
+			aiService, err = ai.NewService(aiConfig, db)
+			if err != nil {
+				fmt.Printf("⚠️  AI summary disabled: %v\n", err)
+			}
+		}
+	}
+
 	fmt.Println("✅ Email Sentinel Started")
 	fmt.Printf("   Monitoring %d filter(s)\n", len(cfg.Filters))
 	fmt.Printf("   Polling interval: %d seconds\n", cfg.PollingInterval)
@@ -150,6 +168,11 @@ func runStart(cmd *cobra.Command, args []string) {
 	}
 	if cfg.Notifications.Mobile.Enabled {
 		fmt.Println("   Mobile notifications: enabled")
+	}
+	if aiService != nil {
+		fmt.Println("   AI summaries: enabled")
+		aiConfig, _ := ai.LoadConfig()
+		fmt.Printf("   AI provider: %s\n", aiConfig.AISummary.Provider)
 	}
 
 	// Start system tray if requested
@@ -187,12 +210,12 @@ func runStart(cmd *cobra.Command, args []string) {
 	defer ticker.Stop()
 
 	// Do initial check
-	checkEmails(client, cfg, seenMessages, db, priorityRules)
+	checkEmails(client, cfg, seenMessages, db, priorityRules, aiService)
 
 	for {
 		select {
 		case <-ticker.C:
-			checkEmails(client, cfg, seenMessages, db, priorityRules)
+			checkEmails(client, cfg, seenMessages, db, priorityRules, aiService)
 		case <-sigChan:
 			fmt.Println("\n\n⏹️  Stopping Email Sentinel...")
 			if trayMode {
@@ -203,7 +226,7 @@ func runStart(cmd *cobra.Command, args []string) {
 	}
 }
 
-func checkEmails(client *gmail.Client, cfg *filter.Config, seenMessages *state.SeenMessages, db *sql.DB, priorityRules *rules.Rules) {
+func checkEmails(client *gmail.Client, cfg *filter.Config, seenMessages *state.SeenMessages, db *sql.DB, priorityRules *rules.Rules, aiService *ai.Service) {
 	// Fetch recent messages
 	messages, err := client.GetRecentMessages(10)
 	if err != nil {
@@ -301,6 +324,27 @@ func checkEmails(client *gmail.Client, cfg *filter.Config, seenMessages *state.S
 				// Update system tray if enabled
 				if trayMode {
 					tray.UpdateTrayOnNewAlert(*alert)
+				}
+
+				// Generate AI summary asynchronously if enabled
+				if aiService != nil {
+					go func(alertCopy storage.Alert) {
+						summary, err := aiService.GenerateSummary(
+							alertCopy.MessageID,
+							alertCopy.Sender,
+							alertCopy.Subject,
+							"", // body not available in snippet API
+							alertCopy.Snippet,
+							alertCopy.Priority,
+						)
+						if err != nil {
+							fmt.Printf("   ⚠️  AI summary failed: %v\n", err)
+							return
+						}
+						if summary != nil {
+							fmt.Printf("   🤖 AI: %s\n", summary.Summary)
+						}
+					}(*alert)
 				}
 			}
 		}

@@ -175,7 +175,18 @@ func GetRecentAlerts(db *sql.DB, limit int) ([]Alert, error) {
 	}
 	defer rows.Close()
 
-	return scanAlerts(rows)
+	alerts, err := scanAlerts(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	// Populate FilterLabels from filter configuration
+	if err := PopulateFilterLabels(alerts); err != nil {
+		// Log error but don't fail - alerts can still be shown
+		fmt.Printf("Warning: Could not populate filter labels: %v\n", err)
+	}
+
+	return alerts, nil
 }
 
 // getAlertsSince returns all alerts since the given time
@@ -238,6 +249,34 @@ func CleanupDailyAlerts(db *sql.DB) (int64, error) {
 		return 0, fmt.Errorf("daily cleanup failed: %w", err)
 	}
 
+	return deleted, nil
+}
+
+// DeleteAllAlerts deletes all alerts from the database
+// Returns the number of alerts deleted
+func DeleteAllAlerts(db *sql.DB) (int64, error) {
+	query := "DELETE FROM alerts"
+	result, err := db.Exec(query)
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete all alerts: %w", err)
+	}
+
+	deleted, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get deleted count: %w", err)
+	}
+
+	return deleted, nil
+}
+
+// DeleteAlerts24HoursOld deletes alerts older than 24 hours
+// Returns the number of alerts deleted
+func DeleteAlerts24HoursOld(db *sql.DB) (int64, error) {
+	cutoff := time.Now().Add(-24 * time.Hour)
+	deleted, err := DeleteAlertsBefore(db, cutoff)
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete 24-hour-old alerts: %w", err)
+	}
 	return deleted, nil
 }
 
@@ -529,4 +568,56 @@ func boolToInt(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+// PopulateFilterLabels populates the FilterLabels field for alerts by loading
+// the filter configuration and matching filter names
+func PopulateFilterLabels(alerts []Alert) error {
+	// Import filter package to load config
+	// We need to do this dynamically to avoid import cycles
+	// For now, we'll use a simpler approach: check the filter name for common patterns
+
+	for i := range alerts {
+		// For now, use a simple heuristic: check if filter name contains "otp"
+		// This can be enhanced later to load actual filter config
+		filterNameLower := ""
+		for _, ch := range alerts[i].FilterName {
+			if ch >= 'A' && ch <= 'Z' {
+				filterNameLower += string(ch + 32)
+			} else {
+				filterNameLower += string(ch)
+			}
+		}
+
+		// Check if filter name suggests OTP
+		if containsSubstring(filterNameLower, "otp") ||
+		   containsSubstring(filterNameLower, "code") ||
+		   containsSubstring(filterNameLower, "verification") ||
+		   containsSubstring(filterNameLower, "2fa") ||
+		   containsSubstring(filterNameLower, "authentication") {
+			alerts[i].FilterLabels = []string{"otp"}
+		}
+	}
+
+	return nil
+}
+
+// containsSubstring checks if a string contains a substring (simple implementation)
+func containsSubstring(s, substr string) bool {
+	if len(substr) > len(s) {
+		return false
+	}
+	for i := 0; i <= len(s)-len(substr); i++ {
+		match := true
+		for j := 0; j < len(substr); j++ {
+			if s[i+j] != substr[j] {
+				match = false
+				break
+			}
+		}
+		if match {
+			return true
+		}
+	}
+	return false
 }

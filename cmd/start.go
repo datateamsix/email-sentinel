@@ -26,6 +26,7 @@ import (
 
 var daemonMode bool
 var trayMode bool
+var cleanupInterval int // in minutes
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
@@ -53,6 +54,7 @@ func init() {
 	rootCmd.AddCommand(startCmd)
 	startCmd.Flags().BoolVarP(&daemonMode, "daemon", "d", false, "Run as background daemon")
 	startCmd.Flags().BoolVarP(&trayMode, "tray", "t", false, "Run with system tray icon")
+	startCmd.Flags().IntVar(&cleanupInterval, "cleanup-interval", 60, "Auto-cleanup interval in minutes (0=disabled, default=60)")
 }
 
 func runStart(cmd *cobra.Command, args []string) {
@@ -153,12 +155,20 @@ func runStart(cmd *cobra.Command, args []string) {
 	// Start system tray if requested
 	if trayMode {
 		fmt.Println("   System tray: enabled")
+		if cleanupInterval > 0 {
+			fmt.Printf("   Auto-cleanup: every %d minutes\n", cleanupInterval)
+		} else {
+			fmt.Println("   Auto-cleanup: disabled")
+		}
 		fmt.Println("\n📱 Starting system tray... (Look for icon in taskbar)")
 		fmt.Println("   Right-click tray icon for menu options")
 
 		// Run tray in a goroutine - it blocks, so we run monitoring in main goroutine
 		go func() {
-			tray.Run(tray.Config{DB: db})
+			tray.Run(tray.Config{
+				DB:              db,
+				CleanupInterval: time.Duration(cleanupInterval) * time.Minute,
+			})
 		}()
 
 		// Give tray time to initialize

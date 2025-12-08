@@ -23,18 +23,21 @@ type TrayApp struct {
 	hasUrgent       bool
 	refreshTimer    *time.Timer
 	refreshMu       sync.Mutex
+	cleanupInterval time.Duration
 }
 
 // Config holds configuration for the tray app
 type Config struct {
-	DB *sql.DB
+	DB              *sql.DB
+	CleanupInterval time.Duration // How often to cleanup old alerts (0 = disabled)
 }
 
 var (
-	globalApp     *TrayApp
-	mRecentAlerts *systray.MenuItem
-	mOpenHistory  *systray.MenuItem
-	mQuit         *systray.MenuItem
+	globalApp      *TrayApp
+	mRecentAlerts  *systray.MenuItem
+	mOpenHistory   *systray.MenuItem
+	mClearAlerts   *systray.MenuItem
+	mQuit          *systray.MenuItem
 )
 
 // Run starts the system tray application
@@ -45,6 +48,7 @@ func Run(cfg Config) {
 		alertUpdateChan: make(chan storage.Alert, 100),
 		quitChan:        make(chan struct{}),
 		recentAlerts:    make([]*systray.MenuItem, 0),
+		cleanupInterval: cfg.CleanupInterval,
 	}
 
 	systray.Run(onReady, onExit)
@@ -63,6 +67,7 @@ func onReady() {
 	mRecentAlerts = systray.AddMenuItem("Recent Alerts", "View recent email alerts")
 	systray.AddSeparator()
 	mOpenHistory = systray.AddMenuItem("Open History", "View all alerts in terminal")
+	mClearAlerts = systray.AddMenuItem("Clear Alerts", "Delete all alerts from history")
 	systray.AddSeparator()
 	mQuit = systray.AddMenuItem("Quit", "Quit Email Sentinel")
 
@@ -155,10 +160,23 @@ func (app *TrayApp) loadRecentAlerts() {
 
 // addAlertMenuItem adds a single alert to the recent alerts submenu
 func (app *TrayApp) addAlertMenuItem(alert storage.Alert) {
-	// Format the menu item title
+	// Determine icon based on priority and filter labels
 	icon := "📧"
-	if alert.Priority == 1 {
-		icon = "🔥"
+
+	// Check if this is an OTP-related alert
+	isOTP := false
+	for _, label := range alert.FilterLabels {
+		if label == "otp" || label == "OTP" {
+			isOTP = true
+			break
+		}
+	}
+
+	// Set icon: OTP takes precedence, then priority, then default
+	if isOTP {
+		icon = "🔐" // Lock icon for OTP messages
+	} else if alert.Priority == 1 {
+		icon = "🔥" // Fire icon for high priority
 	}
 
 	// Truncate subject if too long
@@ -174,7 +192,12 @@ func (app *TrayApp) addAlertMenuItem(alert storage.Alert) {
 	}
 
 	title := fmt.Sprintf("%s [%s] %s", icon, timeStr, subject)
-	tooltip := fmt.Sprintf("From: %s\nClick to open in Gmail", alert.Sender)
+
+	// Enhanced tooltip with filter info
+	tooltip := fmt.Sprintf("From: %s\nFilter: %s\nClick to open in Gmail", alert.Sender, alert.FilterName)
+	if isOTP {
+		tooltip = fmt.Sprintf("🔐 OTP Message\nFrom: %s\nFilter: %s\nClick to open in Gmail", alert.Sender, alert.FilterName)
+	}
 
 	menuItem := mRecentAlerts.AddSubMenuItem(title, tooltip)
 	app.recentAlerts = append(app.recentAlerts, menuItem)
@@ -199,6 +222,9 @@ func (app *TrayApp) handleMenuEvents() {
 		case <-mOpenHistory.ClickedCh:
 			app.openHistory()
 
+		case <-mClearAlerts.ClickedCh:
+			app.clearAlerts()
+
 		case <-mQuit.ClickedCh:
 			log.Println("Quit requested from tray menu")
 			systray.Quit()
@@ -214,6 +240,19 @@ func (app *TrayApp) handleMenuEvents() {
 func (app *TrayApp) handleAlertUpdates() {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
+
+	// Setup cleanup ticker if enabled (interval > 0)
+	var cleanupTicker *time.Ticker
+	var cleanupChan <-chan time.Time
+
+	if app.cleanupInterval > 0 {
+		cleanupTicker = time.NewTicker(app.cleanupInterval)
+		defer cleanupTicker.Stop()
+		cleanupChan = cleanupTicker.C
+		log.Printf("🗑️  Auto-cleanup enabled: checking every %v", app.cleanupInterval)
+	} else {
+		log.Println("🗑️  Auto-cleanup disabled")
+	}
 
 	for {
 		select {
@@ -245,6 +284,16 @@ func (app *TrayApp) handleAlertUpdates() {
 			// Periodically refresh the alerts (debounced)
 			app.scheduleRefresh()
 
+		case <-cleanupChan:
+			// Delete alerts older than 24 hours (only if cleanup is enabled)
+			deleted, err := storage.DeleteAlerts24HoursOld(app.db)
+			if err != nil {
+				log.Printf("⚠️  Error cleaning up 24-hour-old alerts: %v", err)
+			} else if deleted > 0 {
+				log.Printf("🗑️  Cleaned up %d alert(s) older than 24 hours", deleted)
+				app.scheduleRefresh()
+			}
+
 		case <-app.quitChan:
 			return
 		}
@@ -265,23 +314,28 @@ func UpdateTrayOnNewAlert(alert storage.Alert) {
 	}
 }
 
-// openHistory opens the alerts history in a terminal window
+// openHistory opens the alerts history in a terminal window with management commands
 func (app *TrayApp) openHistory() {
 	var cmd *exec.Cmd
 
+	// Create a script that shows alerts and management commands
+	script := `email-sentinel.exe alerts && echo. && echo ============================================ && echo Alert Management Commands: && echo. && echo   email-sentinel alerts          - View all alerts && echo   email-sentinel alerts clear    - Clear all alerts && echo. && echo Filter Management Commands: && echo. && echo   email-sentinel filter list     - List all filters && echo   email-sentinel filter add      - Add new filter && echo   email-sentinel filter remove   - Remove a filter && echo. && echo OTP Commands: && echo. && echo   email-sentinel otp list        - View OTP codes && echo   email-sentinel otp clear       - Clear old OTPs && echo. && echo ============================================ && echo. && pause`
+
 	switch runtime.GOOS {
 	case "windows":
-		// Open new cmd window and run the alerts command
-		cmd = exec.Command("cmd", "/c", "start", "cmd", "/k", "email-sentinel.exe alerts")
+		// Open new cmd window and run the script
+		cmd = exec.Command("cmd", "/c", "start", "cmd", "/k", script)
 	case "darwin":
-		// macOS - open new Terminal window
-		cmd = exec.Command("open", "-a", "Terminal", "email-sentinel alerts")
+		// macOS - create a temporary script file
+		script = `email-sentinel alerts && echo "" && echo "============================================" && echo "Alert Management Commands:" && echo "" && echo "  email-sentinel alerts          - View all alerts" && echo "  email-sentinel alerts clear    - Clear all alerts" && echo "" && echo "Filter Management Commands:" && echo "" && echo "  email-sentinel filter list     - List all filters" && echo "  email-sentinel filter add      - Add new filter" && echo "  email-sentinel filter remove   - Remove a filter" && echo "" && echo "OTP Commands:" && echo "" && echo "  email-sentinel otp list        - View OTP codes" && echo "  email-sentinel otp clear       - Clear old OTPs" && echo "" && echo "============================================" && echo "" && read -p "Press any key to continue..."`
+		cmd = exec.Command("osascript", "-e", `tell application "Terminal" to do script "`+script+`"`)
 	default:
-		// Linux - try common terminal emulators
+		// Linux - create a bash script
+		script = `email-sentinel alerts && echo "" && echo "============================================" && echo "Alert Management Commands:" && echo "" && echo "  email-sentinel alerts          - View all alerts" && echo "  email-sentinel alerts clear    - Clear all alerts" && echo "" && echo "Filter Management Commands:" && echo "" && echo "  email-sentinel filter list     - List all filters" && echo "  email-sentinel filter add      - Add new filter" && echo "  email-sentinel filter remove   - Remove a filter" && echo "" && echo "OTP Commands:" && echo "" && echo "  email-sentinel otp list        - View OTP codes" && echo "  email-sentinel otp clear       - Clear old OTPs" && echo "" && echo "============================================" && echo "" && read -p "Press any key to continue..."`
 		terminals := []string{"gnome-terminal", "konsole", "xterm"}
 		for _, term := range terminals {
 			if _, err := exec.LookPath(term); err == nil {
-				cmd = exec.Command(term, "-e", "email-sentinel alerts")
+				cmd = exec.Command(term, "-e", "bash", "-c", script)
 				break
 			}
 		}
@@ -291,6 +345,22 @@ func (app *TrayApp) openHistory() {
 		if err := cmd.Start(); err != nil {
 			log.Printf("Error opening history: %v", err)
 		}
+	}
+}
+
+// clearAlerts deletes all alerts from the database and refreshes the tray
+func (app *TrayApp) clearAlerts() {
+	deleted, err := storage.DeleteAllAlerts(app.db)
+	if err != nil {
+		log.Printf("❌ Error clearing alerts: %v", err)
+		return
+	}
+
+	if deleted > 0 {
+		log.Printf("🗑️  Cleared %d alert(s) from tray", deleted)
+		app.scheduleRefresh()
+	} else {
+		log.Println("✨ No alerts to clear")
 	}
 }
 

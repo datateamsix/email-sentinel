@@ -719,6 +719,12 @@ $ email-sentinel otp list --active
     Source: body
 ```
 
+**Windows Toast Notification Example:**
+
+![OTP Toast Notification](images/otp-toast.png)
+
+When an OTP code is detected, Windows users receive a rich toast notification in the Action Center showing the verification code prominently for quick access.
+
 ### Configuration
 
 OTP rules are stored in `otp_rules.yaml` (auto-created by wizard):

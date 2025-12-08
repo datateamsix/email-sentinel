@@ -75,7 +75,7 @@ func RunMigrations(db *sql.DB) error {
 	migrations := []struct {
 		version int
 		name    string
-		migrate func(*sql.DB) error
+		migrate func(*sql.Tx) error
 	}{
 		{1, "Add OTP alerts table", Migration_001_AddOTPTable},
 	}
@@ -95,8 +95,8 @@ func RunMigrations(db *sql.DB) error {
 			return fmt.Errorf("failed to begin transaction for migration %d: %w", m.version, err)
 		}
 
-		// Run migration (pass db, not tx, as migrations use db.Exec)
-		if err := m.migrate(db); err != nil {
+		// Run migration using transaction
+		if err := m.migrate(tx); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("migration %d failed: %w", m.version, err)
 		}
@@ -120,7 +120,7 @@ func RunMigrations(db *sql.DB) error {
 
 // Migration_001_AddOTPTable creates the otp_alerts table with indexes
 // This migration is idempotent - safe to run multiple times
-func Migration_001_AddOTPTable(db *sql.DB) error {
+func Migration_001_AddOTPTable(tx *sql.Tx) error {
 	schema := `
 		CREATE TABLE IF NOT EXISTS otp_alerts (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -145,7 +145,7 @@ func Migration_001_AddOTPTable(db *sql.DB) error {
 		CREATE INDEX IF NOT EXISTS idx_otp_message_id ON otp_alerts(message_id);
 	`
 
-	if _, err := db.Exec(schema); err != nil {
+	if _, err := tx.Exec(schema); err != nil {
 		return fmt.Errorf("failed to create otp_alerts table: %w", err)
 	}
 

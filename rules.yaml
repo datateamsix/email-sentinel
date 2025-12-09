@@ -74,8 +74,9 @@ priority_rules:
   # Any email from these domains will be marked as urgent
   vip_domains:
     # Add important partner/client domains here
-    # Example:
-    # - criticalvendor.com
+     - costar.com
+     - costargroup.com
+     - mckinleyinc.com
     # - partner.io
     # - importantclient.com
 

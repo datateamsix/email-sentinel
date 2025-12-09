@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/datateamsix/email-sentinel/internal/storage"
-	"github.com/getlantern/systray"
+	"fyne.io/systray"
 )
 
 // TrayApp represents the system tray application

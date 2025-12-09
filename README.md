@@ -11,15 +11,16 @@ A cross-platform CLI tool that monitors your Gmail inbox and sends real-time not
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/datateamsix/email-sentinel)](https://goreportcard.com/report/github.com/datateamsix/email-sentinel)
 
-## 🎯 Problem Statement
+## 🎯 The Critical Email Problem: Checking Email Like An Addict Looking For A Fix
 
-Waiting for important emails (job opportunities, client responses, urgent messages) means constantly checking your inbox — a major productivity killer. Email Sentinel solves this by:
+Waiting and checking for important emails (job opportunities, client responses, urgent messages) means constantly checking your inbox — a major productivity and focus killer. Email Sentinel solves this by smart, specific notifications:
 
 - **Monitoring Gmail** in the background via the Gmail API
 - **Filtering emails** by sender address or subject line keywords
 - **Pushing notifications** to your desktop and mobile device instantly
+- **Summarizing Emails** what's important, key questions and action items
 
-## ✨ Features
+## ![alt text](image.png) Features
 
 ### Core Functionality
 - **Cross-Platform**: Single binary for Windows, macOS, and Linux
@@ -33,7 +34,7 @@ Waiting for important emails (job opportunities, client responses, urgent messag
 - **Secure**: OAuth 2.0 authentication, credentials stored locally
 - **No Cost**: Uses Gmail API free tier (1B quota units/day)
 
-### Notifications
+### 🚨 Notifications
 - **Desktop Notifications**: Native OS notifications (Windows, macOS, Linux) with filter labels
 - **Windows Toast Notifications**: Rich, clickable notifications in Action Center with Gmail links, labels, and AI summaries
 - **Mobile Push**: Free push notifications to iPhone/Android via [ntfy.sh](https://ntfy.sh) with label tags
@@ -41,7 +42,7 @@ Waiting for important emails (job opportunities, client responses, urgent messag
 - **Label Display**: All notifications show filter labels for easy categorization
 - **AI-Enhanced**: Notifications show AI summaries, questions, and action items when enabled
 
-### Alert Management
+### ⚠️ Alert Management
 - **Alert History**: SQLite database stores all alerts with automatic daily cleanup
 - **View Past Alerts**: Review missed notifications with `email-sentinel alerts`
 - **Direct Gmail Links**: Click any alert to open the email directly in Gmail
@@ -210,6 +211,11 @@ sudo mv email-sentinel /usr/local/bin/
 # 8. Install auto-startup (optional)
 ./email-sentinel install
 ```
+
+**Platform-Specific Quickstart Guides:**
+- **[Windows Quickstart](docs/QUICKSTART_WINDOWS.md)** - Installation, notifications, auto-start, and troubleshooting for Windows 10/11
+- **[macOS Quickstart](docs/QUICKSTART_MACOS.md)** - Installation, menu bar setup, LaunchAgent, and troubleshooting for macOS
+- **[Linux Quickstart](docs/QUICKSTART_LINUX.md)** - Installation, systemd setup, desktop environment configuration for Linux
 
 **For detailed setup instructions**, see **[Complete Setup Guide](docs/build_to_first_alert.md)** - comprehensive guide for Windows, macOS, and Linux.
 

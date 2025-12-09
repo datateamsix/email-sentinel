@@ -3,6 +3,8 @@ package storage
 import (
 	"database/sql"
 	"fmt"
+	"log"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -10,6 +12,69 @@ import (
 
 	_ "modernc.org/sqlite"
 )
+
+// retryDatabaseOperation performs a database operation with exponential backoff retry
+// This prevents data loss when database is temporarily locked or unavailable
+func retryDatabaseOperation(operation func() error, maxRetries int, operationName string) error {
+	var lastErr error
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		err := operation()
+		if err == nil {
+			// Success!
+			if attempt > 1 {
+				log.Printf("✅ %s succeeded on attempt %d/%d", operationName, attempt, maxRetries)
+			}
+			return nil
+		}
+
+		lastErr = err
+
+		// Don't retry on last attempt
+		if attempt == maxRetries {
+			break
+		}
+
+		// Exponential backoff: 100ms, 200ms, 400ms
+		backoff := time.Duration(100*(1<<(attempt-1))) * time.Millisecond
+		log.Printf("⚠️  %s failed (attempt %d/%d), retrying in %v: %v", operationName, attempt, maxRetries, backoff, err)
+		time.Sleep(backoff)
+	}
+
+	return fmt.Errorf("failed after %d attempts: %w", maxRetries, lastErr)
+}
+
+// writeToFailureLog writes an alert to a local file if database operations fail
+// This ensures no alerts are lost even if the database is completely unavailable
+func writeToFailureLog(alert *Alert) error {
+	configDir, err := config.EnsureConfigDir()
+	if err != nil {
+		return fmt.Errorf("failed to get config directory: %w", err)
+	}
+
+	logPath := filepath.Join(configDir, "failed_alerts.log")
+	f, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		return fmt.Errorf("failed to open failure log: %w", err)
+	}
+	defer f.Close()
+
+	// Write alert as JSON line
+	logEntry := fmt.Sprintf("[%s] Filter: %s | From: %s | Subject: %s | Priority: %d | Gmail: %s\n",
+		alert.Timestamp.Format(time.RFC3339),
+		alert.FilterName,
+		alert.Sender,
+		alert.Subject,
+		alert.Priority,
+		alert.GmailLink,
+	)
+
+	if _, err := f.WriteString(logEntry); err != nil {
+		return fmt.Errorf("failed to write to failure log: %w", err)
+	}
+
+	return nil
+}
 
 // Alert represents an email notification stored in the database
 type Alert struct {
@@ -149,6 +214,34 @@ func InsertAlert(db *sql.DB, a *Alert) error {
 	}
 
 	a.ID = id
+	return nil
+}
+
+// InsertAlertWithRetry saves an alert with automatic retry on failure
+// This prevents data loss during temporary database issues (locks, disk full, etc.)
+// Falls back to writing to a local log file if all retries fail
+func InsertAlertWithRetry(db *sql.DB, a *Alert) error {
+	const maxRetries = 3
+
+	err := retryDatabaseOperation(func() error {
+		return InsertAlert(db, a)
+	}, maxRetries, "Insert alert")
+
+	if err != nil {
+		// All retries failed - write to failure log to prevent data loss
+		log.Printf("❌ CRITICAL: Failed to save alert to database after %d retries", maxRetries)
+		log.Printf("   Writing to failure log: %s", a.Subject)
+
+		if logErr := writeToFailureLog(a); logErr != nil {
+			log.Printf("❌ FATAL: Could not write to failure log: %v", logErr)
+			log.Printf("   Alert data: Filter=%s From=%s Subject=%s", a.FilterName, a.Sender, a.Subject)
+			return fmt.Errorf("database insert failed and backup log failed: %w", err)
+		}
+
+		log.Printf("✅ Alert saved to failure log (can be recovered later)")
+		return nil // Don't fail the entire monitoring process
+	}
+
 	return nil
 }
 

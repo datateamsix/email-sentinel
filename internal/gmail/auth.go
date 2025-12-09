@@ -72,7 +72,9 @@ func SaveToken(token *oauth2.Token) error {
 		return err
 	}
 
-	file, err := os.Create(tokenPath)
+	// Create token file with secure permissions (0600 - owner read/write only)
+	// This prevents other users on shared systems from reading OAuth tokens
+	file, err := os.OpenFile(tokenPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err != nil {
 		return fmt.Errorf("unable to create token file: %w", err)
 	}

@@ -7,9 +7,39 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 )
+
+// sanitizeAPIError removes potential API keys and sensitive data from error messages
+// This prevents accidental exposure of credentials in logs or terminal output
+func sanitizeAPIError(errorBody string) string {
+	// Limit error message length
+	const maxLength = 500
+	if len(errorBody) > maxLength {
+		errorBody = errorBody[:maxLength] + "... (truncated)"
+	}
+
+	// Pattern to detect potential API keys (sequences of 20+ alphanumeric chars)
+	apiKeyPattern := regexp.MustCompile(`[a-zA-Z0-9_-]{20,}`)
+	sanitized := apiKeyPattern.ReplaceAllString(errorBody, "[REDACTED]")
+
+	// Remove common API key field names with their values
+	patterns := []string{
+		`"api[_-]?key"\s*:\s*"[^"]+`,
+		`"apiKey"\s*:\s*"[^"]+`,
+		`"token"\s*:\s*"[^"]+`,
+		`"authorization"\s*:\s*"[^"]+`,
+	}
+
+	for _, pattern := range patterns {
+		re := regexp.MustCompile(pattern)
+		sanitized = re.ReplaceAllString(sanitized, `"[REDACTED]":"[REDACTED]"`)
+	}
+
+	return sanitized
+}
 
 // Provider defines the interface for AI providers
 type Provider interface {
@@ -114,7 +144,8 @@ func (p *ClaudeProvider) GenerateSummary(ctx context.Context, req SummaryRequest
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, 0, fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(bodyBytes))
+		sanitized := sanitizeAPIError(string(bodyBytes))
+		return nil, 0, fmt.Errorf("API error (status %d): %s", resp.StatusCode, sanitized)
 	}
 
 	// Parse response
@@ -218,7 +249,8 @@ func (p *OpenAIProvider) GenerateSummary(ctx context.Context, req SummaryRequest
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, 0, fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(bodyBytes))
+		sanitized := sanitizeAPIError(string(bodyBytes))
+		return nil, 0, fmt.Errorf("API error (status %d): %s", resp.StatusCode, sanitized)
 	}
 
 	var openaiResp struct {
@@ -326,7 +358,8 @@ func (p *GeminiProvider) GenerateSummary(ctx context.Context, req SummaryRequest
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, 0, fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(bodyBytes))
+		sanitized := sanitizeAPIError(string(bodyBytes))
+		return nil, 0, fmt.Errorf("API error (status %d): %s", resp.StatusCode, sanitized)
 	}
 
 	var geminiResp struct {

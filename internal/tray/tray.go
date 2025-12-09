@@ -4,8 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/url"
 	"os/exec"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -398,17 +400,51 @@ func (app *TrayApp) clearAlerts() {
 	}
 }
 
+// isValidGmailURL validates that a URL is a legitimate Gmail link
+// This prevents command injection attacks via malicious email subjects
+func isValidGmailURL(urlStr string) bool {
+	// Parse URL
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return false
+	}
+
+	// Must be HTTPS
+	if parsedURL.Scheme != "https" {
+		return false
+	}
+
+	// Must be mail.google.com domain
+	if !strings.HasSuffix(parsedURL.Host, "mail.google.com") {
+		return false
+	}
+
+	// Path should start with /mail/
+	if !strings.HasPrefix(parsedURL.Path, "/mail/") {
+		return false
+	}
+
+	return true
+}
+
 // openBrowser opens the given URL in the default browser
-func openBrowser(url string) {
+// URL is validated before execution to prevent command injection
+func openBrowser(urlStr string) {
+	// Validate URL to prevent command injection attacks
+	if !isValidGmailURL(urlStr) {
+		log.Printf("⚠️  Security: Blocked invalid Gmail URL: %s", urlStr)
+		return
+	}
+
 	var cmd *exec.Cmd
 
 	switch runtime.GOOS {
 	case "windows":
-		cmd = exec.Command("cmd", "/c", "start", url)
+		cmd = exec.Command("cmd", "/c", "start", urlStr)
 	case "darwin":
-		cmd = exec.Command("open", url)
+		cmd = exec.Command("open", urlStr)
 	default:
-		cmd = exec.Command("xdg-open", url)
+		cmd = exec.Command("xdg-open", urlStr)
 	}
 
 	if err := cmd.Start(); err != nil {

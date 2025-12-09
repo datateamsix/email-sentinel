@@ -55,7 +55,17 @@ func (c *Client) monitorTokenRefresh(tokenSource oauth2.TokenSource) {
 		// Get current token from source
 		newToken, err := tokenSource.Token()
 		if err != nil {
-			continue // Silently continue, will retry next cycle
+			// CRITICAL: Token refresh failed - alert user immediately
+			fmt.Println("")
+			fmt.Println("❌ CRITICAL: OAuth token refresh failed!")
+			fmt.Printf("   Error: %v\n", err)
+			fmt.Println("")
+			fmt.Println("   This usually means your Gmail authentication has expired.")
+			fmt.Println("   Please re-authenticate with:")
+			fmt.Println("   email-sentinel init")
+			fmt.Println("")
+			// Continue monitoring, will retry next cycle (5 minutes)
+			continue
 		}
 
 		// Check if token was refreshed (access token changed)

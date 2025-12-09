@@ -310,9 +310,10 @@ func checkEmails(client *gmail.Client, cfg *filter.Config, seenMessages *state.S
 					Priority:     priority,
 				}
 
-				if err := storage.InsertAlert(db, alert); err != nil {
-					// Don't fail on storage errors, just log
-					fmt.Printf("   ⚠️  Failed to save alert to database: %v\n", err)
+				// Save alert with retry logic to prevent data loss
+				if err := storage.InsertAlertWithRetry(db, alert); err != nil {
+					// Critical: Even retry and fallback failed
+					fmt.Printf("   ❌ CRITICAL: Failed to save alert (retry + fallback failed): %v\n", err)
 				}
 
 				// Send Windows toast notification (in addition to existing notifications)

@@ -179,6 +179,84 @@ func InitDB() (*sql.DB, error) {
 	return db, nil
 }
 
+// BackupDatabase creates a backup of the database using SQLite's VACUUM INTO
+// This creates a clean, defragmented copy of the database
+func BackupDatabase(db *sql.DB) error {
+	configDir, err := config.EnsureConfigDir()
+	if err != nil {
+		return fmt.Errorf("failed to get config directory: %w", err)
+	}
+
+	// Create backups directory if it doesn't exist
+	backupDir := filepath.Join(configDir, "backups")
+	if err := os.MkdirAll(backupDir, 0700); err != nil {
+		return fmt.Errorf("failed to create backup directory: %w", err)
+	}
+
+	// Generate backup filename with timestamp
+	timestamp := time.Now().Format("20060102_150405")
+	backupPath := filepath.Join(backupDir, fmt.Sprintf("history_backup_%s.db", timestamp))
+
+	// Use VACUUM INTO for atomic, consistent backup
+	// This is the recommended way to backup SQLite databases
+	log.Printf("📦 Creating database backup: %s", backupPath)
+	_, err = db.Exec(fmt.Sprintf("VACUUM INTO '%s'", backupPath))
+	if err != nil {
+		return fmt.Errorf("failed to create backup: %w", err)
+	}
+
+	log.Printf("✅ Database backup created successfully")
+
+	// Rotate old backups - keep only the last 5
+	if err := rotateBackups(backupDir, 5); err != nil {
+		log.Printf("⚠️  Failed to rotate old backups: %v", err)
+		// Don't fail the backup operation if rotation fails
+	}
+
+	return nil
+}
+
+// rotateBackups removes old backup files, keeping only the most recent N backups
+func rotateBackups(backupDir string, keepCount int) error {
+	entries, err := os.ReadDir(backupDir)
+	if err != nil {
+		return fmt.Errorf("failed to read backup directory: %w", err)
+	}
+
+	// Filter for backup files
+	var backups []os.DirEntry
+	for _, entry := range entries {
+		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".db" {
+			backups = append(backups, entry)
+		}
+	}
+
+	// If we have more backups than we want to keep, remove the oldest
+	if len(backups) > keepCount {
+		// Sort by name (which includes timestamp) - oldest first
+		// Since we use YYYYMMDD_HHMMSS format, alphabetical sort = chronological sort
+		for i := 0; i < len(backups)-keepCount; i++ {
+			oldBackup := filepath.Join(backupDir, backups[i].Name())
+			log.Printf("🗑️  Removing old backup: %s", backups[i].Name())
+			if err := os.Remove(oldBackup); err != nil {
+				log.Printf("⚠️  Failed to remove old backup %s: %v", backups[i].Name(), err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// AutoBackupOnStartup creates a backup when the application starts
+// This ensures we have a recent backup before any operations
+func AutoBackupOnStartup(db *sql.DB) {
+	log.Println("🔄 Running automatic startup backup...")
+	if err := BackupDatabase(db); err != nil {
+		log.Printf("⚠️  Startup backup failed: %v", err)
+		// Don't fail app startup if backup fails
+	}
+}
+
 // CloseDB closes the database connection
 func CloseDB(db *sql.DB) error {
 	if db == nil {

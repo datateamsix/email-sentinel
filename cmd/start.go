@@ -135,6 +135,9 @@ func runStart(cmd *cobra.Command, args []string) {
 	}
 	defer storage.CloseDB(db)
 
+	// Run automatic backup on startup to ensure we have a recent backup
+	storage.AutoBackupOnStartup(db)
+
 	// Start daily cleanup scheduler (runs at 12:00 AM)
 	stopCleanup := make(chan struct{})
 	defer close(stopCleanup)

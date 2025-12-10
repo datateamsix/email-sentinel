@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	googlemail "google.golang.org/api/gmail/v1"
 
 	"github.com/datateamsix/email-sentinel/internal/ai"
 	"github.com/datateamsix/email-sentinel/internal/appconfig"
@@ -362,116 +363,10 @@ func checkEmails(client *gmail.Client, cfg *filter.Config, seenMessages *state.S
 		// Mark as seen immediately
 		seenMessages.MarkSeen(msg.Id)
 
-		// Parse message
-		email := gmail.ParseMessage(msg)
-
-		// Check against all filters (with metadata including labels)
-		matchedFilters, err := filter.CheckAllFiltersWithMetadata(email.From, email.Subject)
-		if err != nil {
-			fmt.Printf("⚠️  Error checking filters: %v\n", err)
-			continue
-		}
-
-		// If matched, send notifications
-		if len(matchedFilters) > 0 {
+		// Process this message
+		matched := processMessage(msg, cfg, db, priorityRules, aiService)
+		if matched {
 			matchCount++
-
-			for _, match := range matchedFilters {
-				labelStr := ""
-				if len(match.Labels) > 0 {
-					labelStr = fmt.Sprintf(" 🏷️ %s", strings.Join(match.Labels, ", "))
-				}
-				fmt.Printf("📧 MATCH [%s]%s From: %s | Subject: %s\n",
-					match.Name, labelStr, email.From, email.Subject)
-
-				// Send desktop notification with labels
-				if cfg.Notifications.Desktop {
-					if err := notify.SendEmailAlertWithLabels(match.Name, match.Labels, email.From, email.Subject); err != nil {
-						fmt.Printf("   ⚠️  Desktop notification failed: %v\n", err)
-					}
-				}
-
-				// Send mobile notification with labels
-				if cfg.Notifications.Mobile.Enabled && cfg.Notifications.Mobile.NtfyTopic != "" {
-					if err := notify.SendMobileEmailAlertWithLabels(
-						cfg.Notifications.Mobile.NtfyTopic,
-						match.Name,
-						match.Labels,
-						email.From,
-						email.Subject,
-					); err != nil {
-						fmt.Printf("   ⚠️  Mobile notification failed: %v\n", err)
-					}
-				}
-
-				// Evaluate priority using rules engine
-				msgMeta := rules.MessageMetadata{
-					Sender:  email.From,
-					Subject: email.Subject,
-					Snippet: email.Snippet,
-					Body:    "", // Body not available in snippet API call
-				}
-				priority := rules.EvaluatePriorityRules(priorityRules, msgMeta)
-
-				// Save alert to database
-				alert := &storage.Alert{
-					Timestamp:    time.Now(),
-					Sender:       email.From,
-					Subject:      email.Subject,
-					Snippet:      email.Snippet,
-					Labels:       strings.Join(msg.LabelIds, ","),
-					MessageID:    msg.Id,
-					GmailLink:    gmail.BuildGmailLink(msg.Id),
-					FilterName:   match.Name,
-					FilterLabels: match.Labels,
-					Priority:     priority,
-				}
-
-				// Save alert with retry logic to prevent data loss
-				if err := storage.InsertAlertWithRetry(db, alert); err != nil {
-					// Critical: Even retry and fallback failed
-					fmt.Printf("   ❌ CRITICAL: Failed to save alert (retry + fallback failed): %v\n", err)
-				}
-
-				// Send Windows toast notification (in addition to existing notifications)
-				// This provides a rich, clickable notification in Windows Action Center
-				if err := notify.SendAlertNotification(*alert); err != nil {
-					fmt.Printf("   ⚠️  Toast notification failed: %v\n", err)
-				}
-
-				// Update system tray if enabled
-				if trayMode {
-					tray.UpdateTrayOnNewAlert(*alert)
-				}
-
-				// Generate AI summary asynchronously if enabled
-				if aiService != nil {
-					go func(alertCopy storage.Alert) {
-						defer func() {
-							if r := recover(); r != nil {
-								fmt.Printf("   ❌ PANIC in AI summary goroutine: %v\n", r)
-								fmt.Printf("      Alert: %s from %s\n", alertCopy.Subject, alertCopy.Sender)
-							}
-						}()
-
-						summary, err := aiService.GenerateSummary(
-							alertCopy.MessageID,
-							alertCopy.Sender,
-							alertCopy.Subject,
-							"", // body not available in snippet API
-							alertCopy.Snippet,
-							alertCopy.Priority,
-						)
-						if err != nil {
-							fmt.Printf("   ⚠️  AI summary failed: %v\n", err)
-							return
-						}
-						if summary != nil {
-							fmt.Printf("   🤖 AI: %s\n", summary.Summary)
-						}
-					}(*alert)
-				}
-			}
 		}
 	}
 
@@ -481,4 +376,153 @@ func checkEmails(client *gmail.Client, cfg *filter.Config, seenMessages *state.S
 	}
 
 	return nil
+}
+
+// processMessage processes a single email message and handles all matched filters
+func processMessage(msg *googlemail.Message, cfg *filter.Config, db *sql.DB, priorityRules *rules.Rules, aiService *ai.Service) bool {
+	// Parse message
+	email := gmail.ParseMessage(msg)
+
+	// Check against all filters (with metadata including labels)
+	matchedFilters, err := filter.CheckAllFiltersWithMetadata(email.From, email.Subject)
+	if err != nil {
+		fmt.Printf("⚠️  Error checking filters: %v\n", err)
+		return false
+	}
+
+	// If no matches, return early
+	if len(matchedFilters) == 0 {
+		return false
+	}
+
+	// Process each matched filter
+	for _, match := range matchedFilters {
+		processFilterMatch(msg, email, match, cfg, db, priorityRules, aiService)
+	}
+
+	return true
+}
+
+// processFilterMatch handles a single filter match including notifications and storage
+func processFilterMatch(msg *googlemail.Message, email *gmail.EmailMessage, match filter.MatchResult, cfg *filter.Config, db *sql.DB, priorityRules *rules.Rules, aiService *ai.Service) {
+	// Log the match
+	labelStr := ""
+	if len(match.Labels) > 0 {
+		labelStr = fmt.Sprintf(" 🏷️ %s", strings.Join(match.Labels, ", "))
+	}
+	fmt.Printf("📧 MATCH [%s]%s From: %s | Subject: %s\n",
+		match.Name, labelStr, email.From, email.Subject)
+
+	// Send notifications (desktop and mobile)
+	sendNotificationsForMatch(match, email, cfg)
+
+	// Evaluate priority using rules engine
+	priority := evaluateMessagePriority(email, priorityRules)
+
+	// Create and save alert
+	alert := createAlert(msg, email, match, priority)
+	saveAndNotifyAlert(db, alert)
+
+	// Generate AI summary asynchronously if enabled
+	if aiService != nil {
+		generateAISummaryAsync(aiService, *alert)
+	}
+}
+
+// sendNotificationsForMatch sends desktop and mobile notifications for a matched filter
+func sendNotificationsForMatch(match filter.MatchResult, email *gmail.EmailMessage, cfg *filter.Config) {
+	// Send desktop notification with labels
+	if cfg.Notifications.Desktop {
+		if err := notify.SendEmailAlertWithLabels(match.Name, match.Labels, email.From, email.Subject); err != nil {
+			fmt.Printf("   ⚠️  Desktop notification failed: %v\n", err)
+		}
+	}
+
+	// Send mobile notification with labels
+	if cfg.Notifications.Mobile.Enabled && cfg.Notifications.Mobile.NtfyTopic != "" {
+		if err := notify.SendMobileEmailAlertWithLabels(
+			cfg.Notifications.Mobile.NtfyTopic,
+			match.Name,
+			match.Labels,
+			email.From,
+			email.Subject,
+		); err != nil {
+			fmt.Printf("   ⚠️  Mobile notification failed: %v\n", err)
+		}
+	}
+}
+
+// evaluateMessagePriority determines the priority level of a message
+func evaluateMessagePriority(email *gmail.EmailMessage, priorityRules *rules.Rules) int {
+	msgMeta := rules.MessageMetadata{
+		Sender:  email.From,
+		Subject: email.Subject,
+		Snippet: email.Snippet,
+		Body:    "", // Body not available in snippet API call
+	}
+	return rules.EvaluatePriorityRules(priorityRules, msgMeta)
+}
+
+// createAlert creates an Alert struct from message data
+func createAlert(msg *googlemail.Message, email *gmail.EmailMessage, match filter.MatchResult, priority int) *storage.Alert {
+	return &storage.Alert{
+		Timestamp:    time.Now(),
+		Sender:       email.From,
+		Subject:      email.Subject,
+		Snippet:      email.Snippet,
+		Labels:       strings.Join(msg.LabelIds, ","),
+		MessageID:    msg.Id,
+		GmailLink:    gmail.BuildGmailLink(msg.Id),
+		FilterName:   match.Name,
+		FilterLabels: match.Labels,
+		Priority:     priority,
+	}
+}
+
+// saveAndNotifyAlert saves an alert to the database and sends system notifications
+func saveAndNotifyAlert(db *sql.DB, alert *storage.Alert) {
+	// Save alert with retry logic to prevent data loss
+	if err := storage.InsertAlertWithRetry(db, alert); err != nil {
+		// Critical: Even retry and fallback failed
+		fmt.Printf("   ❌ CRITICAL: Failed to save alert (retry + fallback failed): %v\n", err)
+	}
+
+	// Send Windows toast notification (in addition to existing notifications)
+	// This provides a rich, clickable notification in Windows Action Center
+	if err := notify.SendAlertNotification(*alert); err != nil {
+		fmt.Printf("   ⚠️  Toast notification failed: %v\n", err)
+	}
+
+	// Update system tray if enabled
+	if trayMode {
+		tray.UpdateTrayOnNewAlert(*alert)
+	}
+}
+
+// generateAISummaryAsync generates an AI summary in a separate goroutine with panic recovery
+func generateAISummaryAsync(aiService *ai.Service, alert storage.Alert) {
+	go func(alertCopy storage.Alert) {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Printf("   ❌ PANIC in AI summary goroutine: %v\n", r)
+				fmt.Printf("      Alert: %s from %s\n", alertCopy.Subject, alertCopy.Sender)
+			}
+		}()
+
+		summary, err := aiService.GenerateSummary(
+			alertCopy.MessageID,
+			alertCopy.Sender,
+			alertCopy.Subject,
+			"", // body not available in snippet API
+			alertCopy.Snippet,
+			alertCopy.Priority,
+		)
+		if err != nil {
+			fmt.Printf("   ⚠️  AI summary failed: %v\n", err)
+			return
+		}
+		if summary != nil {
+			fmt.Printf("   🤖 AI: %s\n", summary.Summary)
+		}
+	}(alert)
 }

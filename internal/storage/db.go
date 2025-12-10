@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/datateamsix/email-sentinel/internal/config"
@@ -265,6 +266,18 @@ func CloseDB(db *sql.DB) error {
 	return db.Close()
 }
 
+// isDuplicateKeyError checks if an error is a UNIQUE constraint violation
+// This happens when trying to insert an alert with a message_id that already exists
+func isDuplicateKeyError(err error) bool {
+	if err == nil {
+		return false
+	}
+	// SQLite error message for UNIQUE constraint violations
+	errMsg := err.Error()
+	return strings.Contains(errMsg, "UNIQUE constraint failed") ||
+		strings.Contains(errMsg, "constraint failed")
+}
+
 // InsertAlert saves a new alert to the database
 // If the message_id already exists, it returns an error (duplicate)
 func InsertAlert(db *sql.DB, a *Alert) error {
@@ -302,6 +315,7 @@ func InsertAlert(db *sql.DB, a *Alert) error {
 // InsertAlertWithRetry saves an alert with automatic retry on failure
 // This prevents data loss during temporary database issues (locks, disk full, etc.)
 // Falls back to writing to a local log file if all retries fail
+// Silently ignores duplicate message_id errors (UNIQUE constraint failures)
 func InsertAlertWithRetry(db *sql.DB, a *Alert) error {
 	const maxRetries = 3
 
@@ -310,6 +324,13 @@ func InsertAlertWithRetry(db *sql.DB, a *Alert) error {
 	}, maxRetries, "Insert alert")
 
 	if err != nil {
+		// Check if this is a duplicate message_id (UNIQUE constraint failure)
+		// This is normal behavior when state file is cleared but DB isn't
+		if isDuplicateKeyError(err) {
+			// Silently ignore - message already in database
+			return nil
+		}
+
 		// All retries failed - write to failure log to prevent data loss
 		log.Printf("❌ CRITICAL: Failed to save alert to database after %d retries", maxRetries)
 		log.Printf("   Writing to failure log: %s", a.Subject)

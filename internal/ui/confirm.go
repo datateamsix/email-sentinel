@@ -73,7 +73,7 @@ func ConfirmWithOptions(message string, options []string) int {
 		fmt.Printf("  [%d] %s\n", i+1, option)
 	}
 	fmt.Println()
-	fmt.Print(ColorGreen.Sprint("Select option [1-%d] or [q] to cancel: ", len(options)))
+	fmt.Print(ColorGreen.Sprintf("Select option [1-%d] or [q] to cancel: ", len(options)))
 
 	response, _ := reader.ReadString('\n')
 	response = strings.TrimSpace(strings.ToLower(response))

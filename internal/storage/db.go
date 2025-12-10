@@ -2,6 +2,7 @@ package storage
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -748,10 +749,10 @@ type EmailSummary struct {
 
 // InsertAISummary saves an AI-generated summary to the database
 func InsertAISummary(db *sql.DB, summary *EmailSummary) error {
-	// Convert slices to JSON strings for storage
+	// Convert slices to JSON strings using standard library
 	questionsJSON := "[]"
 	if len(summary.Questions) > 0 {
-		bytes, err := jsonMarshalStringSlice(summary.Questions)
+		bytes, err := json.Marshal(summary.Questions)
 		if err != nil {
 			return fmt.Errorf("failed to marshal questions: %w", err)
 		}
@@ -760,7 +761,7 @@ func InsertAISummary(db *sql.DB, summary *EmailSummary) error {
 
 	actionItemsJSON := "[]"
 	if len(summary.ActionItems) > 0 {
-		bytes, err := jsonMarshalStringSlice(summary.ActionItems)
+		bytes, err := json.Marshal(summary.ActionItems)
 		if err != nil {
 			return fmt.Errorf("failed to marshal action_items: %w", err)
 		}
@@ -830,120 +831,17 @@ func GetAISummaryByMessageID(db *sql.DB, messageID string) (*EmailSummary, error
 
 	summary.GeneratedAt = time.Unix(generatedAt, 0)
 
-	// Parse JSON strings back to slices
-	if err := jsonUnmarshalStringSlice(questionsJSON, &summary.Questions); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal questions: %w", err)
+	// Parse JSON strings back to slices using standard library
+	if questionsJSON != "" && questionsJSON != "[]" {
+		if err := json.Unmarshal([]byte(questionsJSON), &summary.Questions); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal questions: %w", err)
+		}
 	}
-	if err := jsonUnmarshalStringSlice(actionItemsJSON, &summary.ActionItems); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal action_items: %w", err)
+	if actionItemsJSON != "" && actionItemsJSON != "[]" {
+		if err := json.Unmarshal([]byte(actionItemsJSON), &summary.ActionItems); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal action_items: %w", err)
+		}
 	}
 
 	return &summary, nil
-}
-
-// Helper functions for JSON marshaling/unmarshaling string slices
-func jsonMarshalStringSlice(slice []string) ([]byte, error) {
-	if slice == nil {
-		slice = []string{}
-	}
-	result := "["
-	for i, s := range slice {
-		if i > 0 {
-			result += ","
-		}
-		// Simple JSON string escaping
-		escaped := ""
-		for _, ch := range s {
-			switch ch {
-			case '"':
-				escaped += "\\\""
-			case '\\':
-				escaped += "\\\\"
-			case '\n':
-				escaped += "\\n"
-			case '\r':
-				escaped += "\\r"
-			case '\t':
-				escaped += "\\t"
-			default:
-				escaped += string(ch)
-			}
-		}
-		result += "\"" + escaped + "\""
-	}
-	result += "]"
-	return []byte(result), nil
-}
-
-func jsonUnmarshalStringSlice(jsonStr string, dest *[]string) error {
-	// Simple JSON array parser
-	if jsonStr == "" || jsonStr == "[]" {
-		*dest = []string{}
-		return nil
-	}
-
-	// Remove brackets
-	if len(jsonStr) < 2 || jsonStr[0] != '[' || jsonStr[len(jsonStr)-1] != ']' {
-		return fmt.Errorf("invalid JSON array format")
-	}
-
-	content := jsonStr[1 : len(jsonStr)-1]
-	if content == "" {
-		*dest = []string{}
-		return nil
-	}
-
-	// Parse strings
-	var result []string
-	inString := false
-	escaped := false
-	current := ""
-
-	for i := 0; i < len(content); i++ {
-		ch := content[i]
-
-		if escaped {
-			switch ch {
-			case 'n':
-				current += "\n"
-			case 'r':
-				current += "\r"
-			case 't':
-				current += "\t"
-			case '"':
-				current += "\""
-			case '\\':
-				current += "\\"
-			default:
-				current += string(ch)
-			}
-			escaped = false
-			continue
-		}
-
-		if ch == '\\' {
-			escaped = true
-			continue
-		}
-
-		if ch == '"' {
-			if inString {
-				// End of string
-				result = append(result, current)
-				current = ""
-				inString = false
-			} else {
-				// Start of string
-				inString = true
-			}
-			continue
-		}
-
-		if inString {
-			current += string(ch)
-		}
-	}
-
-	*dest = result
-	return nil
 }

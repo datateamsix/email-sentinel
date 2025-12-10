@@ -67,13 +67,12 @@ func printHelpCenteredRow(text string, width int) {
 	leftPadding := totalPadding / 2
 	rightPadding := totalPadding - leftPadding
 
-	fmt.Printf("%s%s%s%s%s%s\n",
+	fmt.Printf("%s%s%s%s%s\n",
 		ColorCyan.Sprint("║"),
 		strings.Repeat(" ", leftPadding),
 		ColorBold.Sprint(text),
 		strings.Repeat(" ", rightPadding),
-		ColorCyan.Sprint("║"),
-	)
+		ColorCyan.Sprint("║"))
 }
 
 // printHelpEmptyRow prints an empty row with borders for help display

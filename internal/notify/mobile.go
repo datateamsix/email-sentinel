@@ -33,14 +33,17 @@ func SendMobileNotification(topic, title, message string) error {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
+		RecordMobileFailure()
 		return fmt.Errorf("failed to send mobile notification: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		RecordMobileFailure()
 		return fmt.Errorf("ntfy.sh returned status %d", resp.StatusCode)
 	}
 
+	RecordMobileSuccess()
 	return nil
 }
 
@@ -86,13 +89,16 @@ func SendMobileEmailAlertWithLabels(topic, filterName string, labels []string, f
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
+		RecordMobileFailure()
 		return fmt.Errorf("failed to send mobile notification: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		RecordMobileFailure()
 		return fmt.Errorf("ntfy.sh returned status %d", resp.StatusCode)
 	}
 
+	RecordMobileSuccess()
 	return nil
 }

@@ -110,9 +110,11 @@ func SendAlertNotification(a storage.Alert) error {
 	// Push the notification
 	err := notification.Push()
 	if err != nil {
+		RecordDesktopFailure()
 		return fmt.Errorf("failed to send Windows toast notification: %w", err)
 	}
 
+	RecordDesktopSuccess()
 	return nil
 }
 

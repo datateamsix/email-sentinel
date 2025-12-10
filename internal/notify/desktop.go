@@ -11,8 +11,10 @@ func SendDesktopNotification(title, message string) error {
 	// Use beeep to send cross-platform notification
 	err := beeep.Notify(title, message, "")
 	if err != nil {
+		RecordDesktopFailure()
 		return fmt.Errorf("failed to send desktop notification: %w", err)
 	}
+	RecordDesktopSuccess()
 	return nil
 }
 

@@ -25,6 +25,7 @@ type TrayApp struct {
 	hasUrgent       bool
 	refreshTimer    *time.Timer
 	refreshMu       sync.Mutex
+	iconMu          sync.Mutex // Protects systray icon operations
 	cleanupInterval time.Duration
 }
 
@@ -60,7 +61,9 @@ func Run(cfg Config) {
 func onReady() {
 	// Set initial icon and title (only if valid icon data exists)
 	if icon := GetNormalIcon(); icon != nil && len(icon) > 0 {
+		globalApp.iconMu.Lock()
 		systray.SetIcon(icon)
+		globalApp.iconMu.Unlock()
 	}
 	systray.SetTitle("Email Sentinel")
 	systray.SetTooltip("Email Sentinel - Monitoring Gmail")
@@ -142,6 +145,7 @@ func (app *TrayApp) loadRecentAlerts() {
 	app.hasUrgent = hasUrgent
 
 	// Update icon based on urgent status (only if valid icon data exists)
+	app.iconMu.Lock()
 	if hasUrgent {
 		if icon := GetUrgentIcon(); icon != nil && len(icon) > 0 {
 			systray.SetIcon(icon)
@@ -153,6 +157,7 @@ func (app *TrayApp) loadRecentAlerts() {
 		}
 		systray.SetTooltip("Email Sentinel - Monitoring Gmail")
 	}
+	app.iconMu.Unlock()
 
 	// Add each alert as a submenu item
 	for _, alert := range alerts {
@@ -302,8 +307,10 @@ func (app *TrayApp) handleAlertUpdates() {
 				app.mu.Unlock()
 
 				if icon := GetUrgentIcon(); icon != nil && len(icon) > 0 {
+					app.iconMu.Lock()
 					systray.SetIcon(icon)
 					systray.SetTooltip("Email Sentinel - ⚠️ New urgent alert!")
+					app.iconMu.Unlock()
 				}
 
 				// Schedule a refresh after icon flash (debounced)

@@ -211,17 +211,57 @@ func runStart(cmd *cobra.Command, args []string) {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	// Start monitoring loop
+	// Start monitoring loop with circuit breaker
 	ticker := time.NewTicker(time.Duration(cfg.PollingInterval) * time.Second)
 	defer ticker.Stop()
 
+	// Circuit breaker state
+	var (
+		failureCount    int
+		lastFailureTime time.Time
+		backoffDuration = time.Duration(cfg.PollingInterval) * time.Second
+	)
+
 	// Do initial check
-	checkEmails(client, cfg, seenMessages, db, priorityRules, aiService)
+	if err := checkEmailsWithRecovery(client, cfg, seenMessages, db, priorityRules, aiService); err != nil {
+		failureCount++
+		lastFailureTime = time.Now()
+	}
 
 	for {
 		select {
 		case <-ticker.C:
-			checkEmails(client, cfg, seenMessages, db, priorityRules, aiService)
+			// Circuit breaker: implement exponential backoff on repeated failures
+			if failureCount > 0 && time.Since(lastFailureTime) < backoffDuration {
+				fmt.Printf("[%s] Backing off due to %d consecutive failures... waiting %v\n",
+					time.Now().Format("15:04:05"), failureCount, backoffDuration)
+				continue
+			}
+
+			// Attempt email check with recovery
+			if err := checkEmailsWithRecovery(client, cfg, seenMessages, db, priorityRules, aiService); err != nil {
+				failureCount++
+				lastFailureTime = time.Now()
+
+				// Exponential backoff: 45s, 90s, 180s, 360s (max 6 minutes)
+				backoffDuration = time.Duration(cfg.PollingInterval*(1<<uint(min(failureCount-1, 3)))) * time.Second
+
+				if failureCount >= 5 {
+					fmt.Printf("\n❌ CRITICAL: %d consecutive Gmail API failures\n", failureCount)
+					fmt.Printf("   Last error: %v\n", err)
+					fmt.Printf("   Backing off for %v before next attempt\n", backoffDuration)
+					fmt.Printf("   Check your network connection and Gmail API quota\n\n")
+				}
+			} else {
+				// Success - reset circuit breaker
+				if failureCount > 0 {
+					fmt.Printf("[%s] ✅ Gmail API recovered after %d failures\n",
+						time.Now().Format("15:04:05"), failureCount)
+					failureCount = 0
+					backoffDuration = time.Duration(cfg.PollingInterval) * time.Second
+				}
+			}
+
 		case <-sigChan:
 			fmt.Println("\n\n⏹️  Stopping Email Sentinel...")
 			if trayMode {
@@ -230,6 +270,26 @@ func runStart(cmd *cobra.Command, args []string) {
 			return
 		}
 	}
+}
+
+// min returns the minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// checkEmailsWithRecovery wraps checkEmails with panic recovery
+func checkEmailsWithRecovery(client *gmail.Client, cfg *filter.Config, seenMessages *state.SeenMessages, db *sql.DB, priorityRules *rules.Rules, aiService *ai.Service) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic in checkEmails: %v", r)
+			fmt.Printf("\n❌ PANIC RECOVERED in email checking: %v\n", r)
+		}
+	}()
+
+	return checkEmails(client, cfg, seenMessages, db, priorityRules, aiService)
 }
 
 // createAIConfigFromAppConfig converts the unified AppConfig to the AI config format
@@ -280,12 +340,12 @@ func createAIConfigFromAppConfig(appCfg *appconfig.AppConfig) *ai.Config {
 	}
 }
 
-func checkEmails(client *gmail.Client, cfg *filter.Config, seenMessages *state.SeenMessages, db *sql.DB, priorityRules *rules.Rules, aiService *ai.Service) {
+func checkEmails(client *gmail.Client, cfg *filter.Config, seenMessages *state.SeenMessages, db *sql.DB, priorityRules *rules.Rules, aiService *ai.Service) error {
 	// Fetch recent messages
 	messages, err := client.GetRecentMessages(10)
 	if err != nil {
 		fmt.Printf("⚠️  Error fetching messages: %v\n", err)
-		return
+		return err
 	}
 
 	matchCount := 0
@@ -384,6 +444,13 @@ func checkEmails(client *gmail.Client, cfg *filter.Config, seenMessages *state.S
 				// Generate AI summary asynchronously if enabled
 				if aiService != nil {
 					go func(alertCopy storage.Alert) {
+						defer func() {
+							if r := recover(); r != nil {
+								fmt.Printf("   ❌ PANIC in AI summary goroutine: %v\n", r)
+								fmt.Printf("      Alert: %s from %s\n", alertCopy.Subject, alertCopy.Sender)
+							}
+						}()
+
 						summary, err := aiService.GenerateSummary(
 							alertCopy.MessageID,
 							alertCopy.Sender,
@@ -409,4 +476,6 @@ func checkEmails(client *gmail.Client, cfg *filter.Config, seenMessages *state.S
 		fmt.Printf("[%s] Checked %d messages, no new matches\n",
 			time.Now().Format("15:04:05"), len(messages))
 	}
+
+	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/datateamsix/email-sentinel/internal/config"
 	"github.com/datateamsix/email-sentinel/internal/gmail"
@@ -165,18 +166,48 @@ func EvaluatePriorityRules(rules *Rules, msg MessageMetadata) int {
 // IsQuietTime checks if the current time falls within quiet hours
 // Returns true if notifications should be suppressed
 func (r *Rules) IsQuietTime() bool {
-	// TODO: Implement time-based quiet hours checking
-	// This would parse QuietHoursStart/End and compare with current time
-	// For now, returns false (quiet hours disabled)
-	return false
+	// If quiet hours not configured, return false
+	if r.NotificationSettings.QuietHoursStart == "" || r.NotificationSettings.QuietHoursEnd == "" {
+		return false
+	}
+
+	now := time.Now()
+	currentTime := now.Format("15:04")
+
+	start := r.NotificationSettings.QuietHoursStart
+	end := r.NotificationSettings.QuietHoursEnd
+
+	// Handle overnight quiet hours (e.g., 22:00 to 08:00)
+	if start > end {
+		// Quiet hours span midnight
+		return currentTime >= start || currentTime < end
+	}
+
+	// Normal quiet hours (e.g., 12:00 to 14:00)
+	return currentTime >= start && currentTime < end
 }
 
 // ShouldNotifyOnWeekend checks if notifications should be sent on weekends
-// based on the weekend_mode setting
-func (r *Rules) ShouldNotifyOnWeekend() bool {
-	// TODO: Implement weekend checking
-	// "normal" = notify as usual
-	// "quiet" = only notify for priority 1
-	// "disabled" = no notifications
-	return true
+// based on the weekend_mode setting and message priority
+func (r *Rules) ShouldNotifyOnWeekend(priority int) bool {
+	now := time.Now()
+	weekday := now.Weekday()
+
+	// Check if it's weekend (Saturday or Sunday)
+	isWeekend := weekday == time.Saturday || weekday == time.Sunday
+	if !isWeekend {
+		return true // Not weekend, always notify
+	}
+
+	// It's weekend - check mode
+	switch r.NotificationSettings.WeekendMode {
+	case "disabled":
+		return false // No notifications on weekends
+	case "quiet":
+		return priority == 1 // Only priority 1 (urgent) notifications
+	case "normal":
+		fallthrough
+	default:
+		return true // Notify as usual
+	}
 }

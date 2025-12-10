@@ -157,8 +157,11 @@ func InitDB() (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to enable WAL mode: %w", err)
 	}
 
-	// Limit to 1 connection to prevent write conflicts
-	db.SetMaxOpenConns(1)
+	// Set connection pool size - WAL mode allows multiple readers
+	// With WAL mode, we can safely increase this to 5 for better concurrency
+	db.SetMaxOpenConns(5)
+	db.SetMaxIdleConns(2)
+	db.SetConnMaxLifetime(time.Hour)
 
 	// Create tables and indexes
 	if _, err := db.Exec(schema); err != nil {

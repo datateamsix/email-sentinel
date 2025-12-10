@@ -2,6 +2,7 @@ package state
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -145,7 +146,7 @@ func (sm *SeenMessages) load() error {
 	return nil
 }
 
-// save writes the state to disk
+// save writes the state to disk with retry logic
 func (sm *SeenMessages) save() error {
 	sm.mu.RLock()
 	messages := make([]SeenMessage, 0, len(sm.messages))
@@ -171,5 +172,37 @@ func (sm *SeenMessages) save() error {
 		return err
 	}
 
-	return os.WriteFile(sm.filePath, data, 0600)
+	// Retry write with exponential backoff
+	return sm.writeWithRetry(data)
+}
+
+// writeWithRetry attempts to write the state file with retry logic
+func (sm *SeenMessages) writeWithRetry(data []byte) error {
+	maxRetries := 3
+	var lastErr error
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		err := os.WriteFile(sm.filePath, data, 0600)
+		if err == nil {
+			return nil // Success
+		}
+
+		lastErr = err
+
+		// Log warning on first failure
+		if attempt == 0 {
+			fmt.Printf("⚠️  Failed to save state file (attempt %d/%d): %v\n", attempt+1, maxRetries, err)
+		}
+
+		// Exponential backoff: 100ms, 200ms, 400ms
+		if attempt < maxRetries-1 {
+			backoff := time.Duration(100*(1<<uint(attempt))) * time.Millisecond
+			time.Sleep(backoff)
+		}
+	}
+
+	// All retries failed
+	fmt.Printf("❌ CRITICAL: Failed to save state file after %d attempts: %v\n", maxRetries, lastErr)
+	fmt.Printf("   This may cause duplicate alerts after restart\n")
+	return fmt.Errorf("failed to save state after %d attempts: %w", maxRetries, lastErr)
 }

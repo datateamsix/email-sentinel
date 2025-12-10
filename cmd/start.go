@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/datateamsix/email-sentinel/internal/ai"
+	"github.com/datateamsix/email-sentinel/internal/appconfig"
 	"github.com/datateamsix/email-sentinel/internal/config"
 	"github.com/datateamsix/email-sentinel/internal/filter"
 	"github.com/datateamsix/email-sentinel/internal/gmail"
@@ -67,10 +68,17 @@ func runStart(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Load configuration
+	// Load unified configuration
+	appCfg, err := appconfig.Load()
+	if err != nil {
+		fmt.Printf("❌ Error loading configuration: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Load filter configuration (separate from app-config for now)
 	cfg, err := filter.LoadConfig()
 	if err != nil {
-		fmt.Printf("❌ Error loading config: %v\n", err)
+		fmt.Printf("❌ Error loading filter config: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -132,31 +140,30 @@ func runStart(cmd *cobra.Command, args []string) {
 	defer close(stopCleanup)
 	go storage.StartDailyCleanup(db, stopCleanup)
 
-	// Load priority rules
-	rulesPath, err := rules.RulesPath()
-	if err != nil {
-		fmt.Printf("❌ Error getting rules path: %v\n", err)
-		os.Exit(1)
+	// Create priority rules from unified config
+	priorityRules := &rules.Rules{
+		PriorityRules: rules.PriorityRules{
+			UrgentKeywords: appCfg.Priority.UrgentKeywords,
+			VIPSenders:     appCfg.Priority.VIPSenders,
+			VIPDomains:     appCfg.Priority.VIPDomains,
+		},
+		NotificationSettings: rules.NotificationSettings{
+			QuietHoursStart: appCfg.Notifications.QuietHours.Start,
+			QuietHoursEnd:   appCfg.Notifications.QuietHours.End,
+			WeekendMode:     appCfg.Notifications.WeekendMode,
+		},
 	}
 
-	priorityRules, err := rules.LoadRules(rulesPath)
-	if err != nil {
-		fmt.Printf("❌ Error loading priority rules: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Initialize AI service if enabled
+	// Initialize AI service if enabled via flag or config
 	var aiService *ai.Service
-	if aiSummaryEnabled {
-		aiConfig, err := ai.LoadConfig()
+	if aiSummaryEnabled || appCfg.AISummary.Enabled {
+		// Create AI config from unified config
+		aiConfig := createAIConfigFromAppConfig(appCfg)
+
+		aiService, err = ai.NewService(aiConfig, db)
 		if err != nil {
 			fmt.Printf("⚠️  AI summary disabled: %v\n", err)
-			fmt.Println("   Tip: Create ai-config.yaml or set API key environment variable")
-		} else {
-			aiService, err = ai.NewService(aiConfig, db)
-			if err != nil {
-				fmt.Printf("⚠️  AI summary disabled: %v\n", err)
-			}
+			fmt.Println("   Tip: Set API key environment variable (GEMINI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY)")
 		}
 	}
 
@@ -171,8 +178,7 @@ func runStart(cmd *cobra.Command, args []string) {
 	}
 	if aiService != nil {
 		fmt.Println("   AI summaries: enabled")
-		aiConfig, _ := ai.LoadConfig()
-		fmt.Printf("   AI provider: %s\n", aiConfig.AISummary.Provider)
+		fmt.Printf("   AI provider: %s\n", appCfg.AISummary.Provider)
 	}
 
 	// Start system tray if requested
@@ -223,6 +229,54 @@ func runStart(cmd *cobra.Command, args []string) {
 			}
 			return
 		}
+	}
+}
+
+// createAIConfigFromAppConfig converts the unified AppConfig to the AI config format
+func createAIConfigFromAppConfig(appCfg *appconfig.AppConfig) *ai.Config {
+	return &ai.Config{
+		AISummary: ai.AISummaryConfig{
+			Enabled:  appCfg.AISummary.Enabled,
+			Provider: appCfg.AISummary.Provider,
+			API: ai.APIConfig{
+				Claude: ai.ClaudeConfig{
+					APIKey:      os.Getenv("ANTHROPIC_API_KEY"),
+					Model:       appCfg.AISummary.Providers.Claude.Model,
+					MaxTokens:   appCfg.AISummary.Providers.Claude.MaxTokens,
+					Temperature: appCfg.AISummary.Providers.Claude.Temperature,
+				},
+				OpenAI: ai.OpenAIConfig{
+					APIKey:      os.Getenv("OPENAI_API_KEY"),
+					Model:       appCfg.AISummary.Providers.OpenAI.Model,
+					MaxTokens:   appCfg.AISummary.Providers.OpenAI.MaxTokens,
+					Temperature: appCfg.AISummary.Providers.OpenAI.Temperature,
+				},
+				Gemini: ai.GeminiConfig{
+					APIKey:      os.Getenv("GEMINI_API_KEY"),
+					Model:       appCfg.AISummary.Providers.Gemini.Model,
+					MaxTokens:   appCfg.AISummary.Providers.Gemini.MaxTokens,
+					Temperature: appCfg.AISummary.Providers.Gemini.Temperature,
+				},
+			},
+			Behavior: ai.BehaviorConfig{
+				EnableCache: appCfg.AISummary.Cache.Enabled,
+				// Set defaults for fields not in new config
+				MaxSummaryLength:       500,
+				PriorityOnly:           false,
+				TimeoutSeconds:         30,
+				RetryAttempts:          3,
+				IncludeInNotifications: true,
+				ShowAIIcon:             true,
+			},
+			RateLimit: ai.RateLimitConfig{
+				MaxPerHour: appCfg.AISummary.Providers.Gemini.RateLimit.RequestsPerMinute * 60,
+				MaxPerDay:  appCfg.AISummary.Providers.Gemini.RateLimit.RequestsPerDay,
+			},
+			Prompt: ai.PromptConfig{
+				System:       appCfg.AISummary.Prompt.System,
+				UserTemplate: "Summarize this email:\n\nFrom: {{.From}}\nSubject: {{.Subject}}\n\n{{.Body}}",
+			},
+		},
 	}
 }
 

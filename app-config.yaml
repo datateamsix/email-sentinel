@@ -1,0 +1,401 @@
+# Email Sentinel - Unified Application Configuration
+# Version: 2.0
+#
+# This unified config replaces the previous separate files:
+# - ai-config.yaml (AI summary settings)
+# - rules.yaml (priority rules and notification settings)
+# - otp_rules.yaml (OTP/2FA detection)
+#
+# Migration: Email Sentinel will automatically detect and migrate
+# from the old separate config files to this unified format.
+
+# ==============================================================================
+# MONITORING SETTINGS
+# ==============================================================================
+monitoring:
+  # How often to check for new emails (in seconds)
+  polling_interval: 45
+
+  # Database settings
+  database:
+    # Enable Write-Ahead Logging for better concurrency
+    wal_mode: true
+    # Auto-cleanup alerts older than 24 hours
+    cleanup_interval: "1h"  # Set to "0" to disable
+
+# ==============================================================================
+# AI EMAIL SUMMARIES
+# ==============================================================================
+ai_summary:
+  # Enable AI-powered email summaries
+  enabled: false
+
+  # AI Provider Selection
+  # Options: "gemini", "claude", "openai"
+  # Requires corresponding API key in environment variables:
+  # - GEMINI_API_KEY for Google Gemini
+  # - ANTHROPIC_API_KEY for Claude
+  # - OPENAI_API_KEY for OpenAI
+  provider: "gemini"
+
+  # Provider-specific configurations
+  providers:
+    gemini:
+      model: "gemini-2.0-flash-exp"
+      endpoint: "https://generativelanguage.googleapis.com/v1beta/models"
+      max_tokens: 1000
+      temperature: 0.3
+      rate_limit:
+        requests_per_minute: 15
+        requests_per_day: 1500
+
+    claude:
+      model: "claude-3-5-haiku-20241022"
+      endpoint: "https://api.anthropic.com/v1/messages"
+      max_tokens: 1000
+      temperature: 0.3
+      rate_limit:
+        requests_per_minute: 50
+        requests_per_day: 10000
+
+    openai:
+      model: "gpt-4o-mini"
+      endpoint: "https://api.openai.com/v1/chat/completions"
+      max_tokens: 1000
+      temperature: 0.3
+      rate_limit:
+        requests_per_minute: 60
+        requests_per_day: 10000
+
+  # Caching settings
+  cache:
+    enabled: true
+    # Cache summaries for emails with same Message-ID
+    ttl: "24h"
+    # Maximum cache size (number of summaries)
+    max_size: 1000
+
+  # Prompt customization
+  prompt:
+    system: |
+      You are an expert email assistant. Analyze emails and provide:
+      1. A concise 2-3 sentence summary
+      2. Key questions that need answers (if any)
+      3. Action items required (if any)
+
+      Be direct and factual. Focus on what matters.
+
+    # Additional instructions for specific email types
+    templates:
+      meeting: "Focus on time, participants, and agenda items."
+      task: "Extract deadlines, deliverables, and dependencies."
+      notification: "Identify what changed and why it matters."
+
+# ==============================================================================
+# PRIORITY RULES
+# ==============================================================================
+priority:
+  # Urgent Keywords - emails containing these words are marked as high priority
+  # Searches in: subject, snippet, and body (case-insensitive)
+  urgent_keywords:
+    # Time-sensitive
+    - urgent
+    - asap
+    - immediate
+    - emergency
+    - critical
+    - deadline
+    - eod
+    - today
+    - now
+    - time sensitive
+
+    # Action required
+    - action required
+    - action needed
+    - please review
+    - needs attention
+    - requires action
+    - response needed
+    - approval required
+
+    # Issues & Problems
+    - issue
+    - problem
+    - error
+    - failed
+    - failure
+    - down
+    - outage
+    - incident
+    - alert
+    - warning
+
+    # Financial
+    - invoice
+    - payment
+    - overdue
+    - past due
+    - billing
+
+    # Priority indicators
+    - important
+    - high priority
+    - priority 1
+    - p1
+    - escalation
+
+  # VIP Senders - specific email addresses that are always high priority
+  # Use full email addresses for exact matching
+  vip_senders:
+    - boss@company.com
+    - ceo@company.com
+    - manager@company.com
+    # Add your important contacts here
+    # Example:
+    # - client@important-client.com
+    # - support@critical-vendor.com
+
+  # VIP Domains - entire domains that are always high priority
+  # Any email from these domains will be marked as urgent
+  vip_domains:
+    - costar.com
+    - costargroup.com
+    - mckinleyinc.com
+    # Add important partner/client domains here
+    # Example:
+    # - partner.io
+    # - importantclient.com
+
+# ==============================================================================
+# OTP/2FA DETECTION
+# ==============================================================================
+otp:
+  # Enable automatic OTP code detection and extraction
+  enabled: true
+
+  # OTP code expiry duration
+  # Codes older than this will be marked as expired
+  expiry_duration: "5m"
+
+  # Maximum number of OTP codes to keep in history
+  max_codes: 50
+
+  # Trusted OTP Senders
+  # Only extract OTP codes from these verified senders
+  # This prevents false positives from spam/phishing emails
+  trusted_senders:
+    # Financial services
+    - noreply@accountprotection.microsoft.com
+    - account-security-noreply@accountprotection.microsoft.com
+    - no-reply@accounts.google.com
+    - account-update@account.apple.com
+
+    # Development platforms
+    - noreply@github.com
+    - team@vercel.com
+    - noreply@gitlab.com
+    - notifications@bitbucket.org
+
+    # Cloud providers
+    - no-reply@aws.amazon.com
+    - azure-noreply@microsoft.com
+    - cloudplatform-noreply@google.com
+
+    # Communication platforms
+    - verify@twilio.com
+    - noreply@slack.com
+    - notifications@discord.com
+
+    # Add your trusted OTP senders here
+    # Example:
+    # - security@yourbank.com
+    # - verify@yourservice.com
+
+  # Trusted Domains - Accept OTP codes from entire domains
+  # Useful for services with multiple sending addresses
+  trusted_domains:
+    - amazon.com
+    - paypal.com
+    - stripe.com
+    - linkedin.com
+    - twitter.com
+    # Add trusted domains here
+    # Example:
+    # - mybank.com
+    # - mycrypto.exchange
+
+  # Custom OTP Patterns
+  # Define regex patterns for detecting OTP codes in email content
+  # Default patterns detect common formats automatically
+  custom_patterns:
+    # 6-digit codes
+    - pattern: '\b\d{6}\b'
+      description: "6-digit numeric code"
+      confidence: high
+
+    # 8-digit codes
+    - pattern: '\b\d{8}\b'
+      description: "8-digit numeric code"
+      confidence: medium
+
+    # Alphanumeric codes (e.g., "A1B2C3")
+    - pattern: '\b[A-Z0-9]{6}\b'
+      description: "6-character alphanumeric code"
+      confidence: medium
+
+    # Add custom patterns here if needed
+    # Example:
+    # - pattern: 'Code:\s*([A-Z0-9]{4}-[A-Z0-9]{4})'
+    #   description: "Hyphenated 8-character code"
+    #   confidence: high
+
+  # Common OTP trigger phrases (used to identify OTP emails)
+  trigger_phrases:
+    - verification code
+    - confirm your
+    - security code
+    - authentication code
+    - login code
+    - access code
+    - one-time password
+    - otp
+    - 2fa
+    - two-factor
+    - verify your account
+    - confirm your email
+    - confirm your identity
+
+  # Clipboard integration
+  clipboard:
+    # Automatically copy latest OTP code to clipboard
+    auto_copy: false
+    # Clear clipboard after this duration (for security)
+    clear_after: "30s"
+
+# ==============================================================================
+# NOTIFICATION SETTINGS
+# ==============================================================================
+notifications:
+  # Desktop notifications
+  desktop:
+    enabled: true
+    # Show notification duration (in seconds)
+    duration: 10
+    # Play sound with notifications
+    sound: true
+
+  # Mobile notifications (via ntfy.sh)
+  mobile:
+    enabled: false
+    # ntfy.sh topic name (must be unique)
+    topic: ""
+    # ntfy.sh server URL
+    server: "https://ntfy.sh"
+    # Priority levels: 1=min, 2=low, 3=default, 4=high, 5=urgent
+    priority: 4
+
+  # Quiet Hours - suppress notifications during these times
+  # Format: "HH:MM" in 24-hour format
+  # Leave empty ("") to disable quiet hours
+  quiet_hours:
+    start: ""    # e.g., "22:00" for 10 PM
+    end: ""      # e.g., "08:00" for 8 AM
+    # Allow urgent/priority emails during quiet hours
+    allow_urgent: true
+
+  # Weekend Mode - how to handle notifications on Sat/Sun
+  # Options: "normal", "quiet", "disabled"
+  #   normal   - send all notifications as usual
+  #   quiet    - only send priority 1 (urgent) notifications
+  #   disabled - no notifications on weekends
+  weekend_mode: normal
+
+# ==============================================================================
+# CONFIGURATION TIPS
+# ==============================================================================
+#
+# 1. Start Conservative
+#    Add only the most critical keywords/senders initially.
+#    You can always expand later based on your needs.
+#
+# 2. Test Your Configuration
+#    Use: email-sentinel test filter "Filter Name" "sender@example.com" "subject text"
+#    This helps verify which emails will be marked as priority.
+#
+# 3. VIP Domains vs VIP Senders
+#    - Use vip_domains for entire companies/organizations
+#    - Use vip_senders for specific individuals
+#
+# 4. Keyword Strategy
+#    - Be specific to avoid too many false positives
+#    - Consider your industry (add technical terms, domain-specific keywords)
+#
+# 5. OTP Security
+#    - Only add verified/legitimate senders to trusted_senders
+#    - Never add unknown senders that could be phishing attempts
+#    - Review OTP codes before using them
+#
+# 6. AI Summaries
+#    - Gemini: Free tier available, good for personal use
+#    - Claude: Best quality, costs per request
+#    - OpenAI: Widely supported, moderate cost
+#
+# 7. Quiet Hours
+#    - Set these to avoid notifications during sleep
+#    - Urgent emails from VIP senders can still notify if allow_urgent=true
+#
+# ==============================================================================
+# EXAMPLES
+# ==============================================================================
+#
+# Example 1: DevOps/SRE Priority Keywords
+# priority:
+#   urgent_keywords:
+#     - production down
+#     - outage
+#     - incident
+#     - security alert
+#     - deployment failed
+#     - rollback
+#     - sev 1
+#
+# Example 2: Sales Priority Keywords
+# priority:
+#   urgent_keywords:
+#     - contract
+#     - deal closing
+#     - proposal
+#     - quote needed
+#     - hot lead
+#
+# Example 3: Customer Support Priority Keywords
+# priority:
+#   urgent_keywords:
+#     - customer escalation
+#     - sev 1
+#     - critical ticket
+#     - complaint
+#     - refund request
+#
+# Example 4: Enable AI Summaries with Gemini
+# ai_summary:
+#   enabled: true
+#   provider: "gemini"
+#   # Set environment variable: export GEMINI_API_KEY="your-key-here"
+#
+# Example 5: Mobile Notifications Setup
+# notifications:
+#   mobile:
+#     enabled: true
+#     topic: "email-sentinel-alerts-yourname"
+#     priority: 5  # Urgent - bypasses Do Not Disturb
+#
+# Example 6: Quiet Hours (10 PM - 8 AM)
+# notifications:
+#   quiet_hours:
+#     start: "22:00"
+#     end: "08:00"
+#     allow_urgent: true
+#
+# ==============================================================================

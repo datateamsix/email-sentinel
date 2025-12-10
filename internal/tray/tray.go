@@ -36,11 +36,14 @@ type Config struct {
 }
 
 var (
-	globalApp      *TrayApp
-	mRecentAlerts  *systray.MenuItem
-	mOpenHistory   *systray.MenuItem
-	mClearAlerts   *systray.MenuItem
-	mQuit          *systray.MenuItem
+	globalApp       *TrayApp
+	mRecentAlerts   *systray.MenuItem
+	mManageAlerts   *systray.MenuItem
+	mAddFilter      *systray.MenuItem
+	mEditFilter     *systray.MenuItem
+	mClearAlerts    *systray.MenuItem
+	mOpenHistory    *systray.MenuItem
+	mQuit           *systray.MenuItem
 )
 
 // Run starts the system tray application
@@ -69,12 +72,19 @@ func onReady() {
 	systray.SetTooltip("Email Sentinel - Monitoring Gmail")
 
 	// Create menu items
-	mRecentAlerts = systray.AddMenuItem("Recent Alerts", "View recent email alerts")
+	mRecentAlerts = systray.AddMenuItem("📬 Recent Alerts", "View recent email alerts")
 	systray.AddSeparator()
-	mOpenHistory = systray.AddMenuItem("Open History", "View all alerts in terminal")
-	mClearAlerts = systray.AddMenuItem("Clear Alerts", "Delete all alerts from history")
+
+	// Nested "Manage Alerts" menu
+	mManageAlerts = systray.AddMenuItem("⚙️ Manage Filters", "Add, edit, or remove email filters")
+	mAddFilter = mManageAlerts.AddSubMenuItem("➕ Add Filter", "Create a new email filter")
+	mEditFilter = mManageAlerts.AddSubMenuItem("✏️ Edit Filter", "Modify an existing filter")
 	systray.AddSeparator()
-	mQuit = systray.AddMenuItem("Quit", "Quit Email Sentinel")
+
+	mClearAlerts = systray.AddMenuItem("🗑️ Clear Alerts", "Delete all alerts from history")
+	mOpenHistory = systray.AddMenuItem("📊 Open History", "View all alerts and commands in terminal")
+	systray.AddSeparator()
+	mQuit = systray.AddMenuItem("❌ Quit", "Quit Email Sentinel")
 
 	// Load initial alerts
 	go globalApp.loadRecentAlerts()
@@ -144,18 +154,24 @@ func (app *TrayApp) loadRecentAlerts() {
 	}
 	app.hasUrgent = hasUrgent
 
-	// Update icon based on urgent status (only if valid icon data exists)
+	// Update icon based on alert presence (red flag up if ANY alerts exist)
 	app.iconMu.Lock()
-	if hasUrgent {
-		if icon := GetUrgentIcon(); icon != nil && len(icon) > 0 {
+	if len(alerts) > 0 {
+		// Any alerts present - show alert icon (mailbox with red flag up)
+		if icon := GetAlertIcon(); icon != nil && len(icon) > 0 {
 			systray.SetIcon(icon)
 		}
-		systray.SetTooltip("Email Sentinel - ⚠️ Urgent alerts!")
+		if hasUrgent {
+			systray.SetTooltip(fmt.Sprintf("Email Sentinel - %d alerts (⚠️ %d urgent)", len(alerts), countUrgentAlerts(alerts)))
+		} else {
+			systray.SetTooltip(fmt.Sprintf("Email Sentinel - %d alerts", len(alerts)))
+		}
 	} else {
+		// No alerts - show normal icon (mailbox with flag down)
 		if icon := GetNormalIcon(); icon != nil && len(icon) > 0 {
 			systray.SetIcon(icon)
 		}
-		systray.SetTooltip("Email Sentinel - Monitoring Gmail")
+		systray.SetTooltip("Email Sentinel - No alerts")
 	}
 	app.iconMu.Unlock()
 
@@ -260,11 +276,17 @@ func (app *TrayApp) addAlertMenuItem(alert storage.Alert) {
 func (app *TrayApp) handleMenuEvents() {
 	for {
 		select {
-		case <-mOpenHistory.ClickedCh:
-			app.openHistory()
+		case <-mAddFilter.ClickedCh:
+			app.addFilterGUI()
+
+		case <-mEditFilter.ClickedCh:
+			app.editFilterGUI()
 
 		case <-mClearAlerts.ClickedCh:
 			app.clearAlerts()
+
+		case <-mOpenHistory.ClickedCh:
+			app.openHistory()
 
 		case <-mQuit.ClickedCh:
 			log.Println("Quit requested from tray menu")
@@ -463,6 +485,17 @@ func openBrowser(urlStr string) {
 func isToday(t time.Time) bool {
 	now := time.Now()
 	return t.Year() == now.Year() && t.Month() == now.Month() && t.Day() == now.Day()
+}
+
+// countUrgentAlerts counts the number of urgent (priority 1) alerts
+func countUrgentAlerts(alerts []storage.Alert) int {
+	count := 0
+	for _, alert := range alerts {
+		if alert.Priority == 1 {
+			count++
+		}
+	}
+	return count
 }
 
 // Quit sends a quit signal to the system tray

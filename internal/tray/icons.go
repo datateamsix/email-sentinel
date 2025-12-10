@@ -12,12 +12,17 @@ var IconNormal []byte
 //go:embed icons/urgent.ico
 var IconUrgent []byte
 
-// GetNormalIcon returns the normal state icon
+// GetNormalIcon returns the normal state icon (no alerts)
 func GetNormalIcon() []byte {
 	return IconNormal
 }
 
-// GetUrgentIcon returns the urgent state icon
+// GetUrgentIcon returns the urgent state icon (urgent alerts present)
 func GetUrgentIcon() []byte {
+	return IconUrgent
+}
+
+// GetAlertIcon returns the icon for when there are alerts (any priority)
+func GetAlertIcon() []byte {
 	return IconUrgent
 }

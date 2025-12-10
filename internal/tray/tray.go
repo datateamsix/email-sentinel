@@ -123,7 +123,7 @@ func (app *TrayApp) loadRecentAlerts() {
 	app.mu.Lock()
 	defer app.mu.Unlock()
 
-	// Clear existing submenu items
+	// Clear existing submenu items - Hide them so they don't show
 	for _, item := range app.recentAlerts {
 		item.Hide()
 	}
@@ -133,14 +133,18 @@ func (app *TrayApp) loadRecentAlerts() {
 	alerts, err := storage.GetRecentAlerts(app.db, 10)
 	if err != nil {
 		log.Printf("Error loading recent alerts: %v", err)
+		// Only add "No alerts yet" if we haven't added it already
 		noAlerts := mRecentAlerts.AddSubMenuItem("No alerts yet", "")
 		noAlerts.Disable()
+		app.recentAlerts = append(app.recentAlerts, noAlerts)
 		return
 	}
 
 	if len(alerts) == 0 {
+		// No alerts in database - show "No alerts yet" message
 		noAlerts := mRecentAlerts.AddSubMenuItem("No alerts yet", "")
 		noAlerts.Disable()
+		app.recentAlerts = append(app.recentAlerts, noAlerts)
 		return
 	}
 
@@ -209,8 +213,14 @@ func (app *TrayApp) addAlertMenuItem(alert storage.Alert) {
 
 	// Truncate subject if too long
 	subject := alert.Subject
-	if len(subject) > 50 {
-		subject = subject[:47] + "..."
+	if len(subject) > 35 {
+		subject = subject[:32] + "..."
+	}
+
+	// Truncate sender if too long
+	sender := alert.Sender
+	if len(sender) > 25 {
+		sender = sender[:22] + "..."
 	}
 
 	// Format time
@@ -219,7 +229,8 @@ func (app *TrayApp) addAlertMenuItem(alert storage.Alert) {
 		timeStr = alert.Timestamp.Format("Jan 2")
 	}
 
-	title := fmt.Sprintf("%s [%s] %s", icon, timeStr, subject)
+	// Format: [icon] [time] [subject] | [sender]
+	title := fmt.Sprintf("%s [%s] %s | %s", icon, timeStr, subject, sender)
 
 	// Enhanced tooltip with filter info and AI summary
 	tooltip := fmt.Sprintf("From: %s\nFilter: %s\nClick to open in Gmail", alert.Sender, alert.FilterName)

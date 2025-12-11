@@ -678,55 +678,22 @@ ai_summary:
       model: gemini-1.5-flash
       max_tokens: 1024
       temperature: 0.3
+
+# OTP settings
+otp:
+  enabled: true
+  expiry_duration: "5m"
+  trusted_senders:
+    - accounts.google.com
+    - noreply@github.com
+    - amazon.com
+    - paypal.com
+  trusted_domains:
+    - amazon.com
+    - paypal.com
 ```
 
-### Filter Configuration (`config.yaml`)
-
-Individual filter rules:
-
-```yaml
-polling_interval: 45
-
-filters:
-  - name: "Job Alerts"
-    from:
-      - linkedin.com
-      - greenhouse.io
-    subject:
-      - interview
-      - opportunity
-    match: any
-    labels:
-      - work
-      - career
-    gmail_scope: inbox
-
-  - name: "Social Updates"
-    from:
-      - facebook.com
-      - twitter.com
-    subject: []
-    match: any
-    labels:
-      - social
-    gmail_scope: social
-```
-
-### OTP Detection (`otp_rules.yaml`)
-
-```yaml
-enabled: true
-expiry_duration: "5m"
-confidence_threshold: 0.7
-auto_copy_to_clipboard: false
-clipboard_auto_clear: "2m"
-
-trusted_otp_senders:
-  - accounts.google.com
-  - noreply@github.com
-  - amazon.com
-  - paypal.com
-```
+**Note**: All settings are now unified in `app-config.yaml`. If upgrading from an older version with separate config files (`rules.yaml`, `otp_rules.yaml`, `ai-config.yaml`), run `email-sentinel config migrate` to automatically convert to the new format.
 
 ---
 

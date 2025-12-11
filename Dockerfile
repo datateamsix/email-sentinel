@@ -39,8 +39,8 @@ WORKDIR /app
 # Copy binary from builder
 COPY --from=builder /build/email-sentinel .
 
-# Copy default config templates
-COPY otp_rules.yaml rules.yaml app-config.yaml ai-config.yaml ./
+# Copy default config template
+COPY app-config.yaml ./
 
 # Create config directory
 RUN mkdir -p /home/sentinel/.config/email-sentinel && \

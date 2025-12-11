@@ -281,7 +281,8 @@ source:
 
 # Explicit builds (limit locally to platforms we can build reliably here)
 builds:
-  - id: default
+  # Linux and Windows builds (CGO disabled for static binaries)
+  - id: linux-windows
     main: .
     goos:
       - linux
@@ -291,6 +292,19 @@ builds:
       - arm64
     env:
       - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X main.AppVersion={{.Version}} -X main.BuildTime={{.Date}} -X main.GitCommit={{.FullCommit}}
+
+  # macOS builds (CGO enabled for systray support)
+  - id: darwin
+    main: .
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=1
     ldflags:
       - -s -w -X main.AppVersion={{.Version}} -X main.BuildTime={{.Date}} -X main.GitCommit={{.FullCommit}}
 

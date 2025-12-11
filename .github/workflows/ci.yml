@@ -57,7 +57,7 @@ jobs:
       - name: Run GoReleaser (snapshot)
         uses: goreleaser/goreleaser-action@v3
         with:
-          args: release --snapshot --clean --skip=validate,announce,publish
+          args: release --snapshot --clean --single-target --skip=validate,announce,publish
 
       - name: Upload dist artifacts
         uses: actions/upload-artifact@v4

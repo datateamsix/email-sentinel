@@ -8,18 +8,12 @@ project_name: email-sentinel
 
 # Archive configuration (tar.gz for Unix, zip for Windows)
 archives:
-  - format: tar.gz
-    name_template: >-
+  - name_template: >-
       {{ .ProjectName }}_{{ .Version }}_{{- if eq .Os "darwin" }}macOS{{- else }}{{ .Os }}{{ end }}_{{- .Arch }}
-    format_overrides:
-      - goos: windows
-        format: zip
     files:
       - README.md
       - LICENSE
       - docs/**/*
-      - otp_rules.yaml
-      - rules.yaml
       - app-config.yaml
 
 # Release plan moved to docs/release_plan.md
@@ -32,8 +26,7 @@ checksum:
   algorithm: sha256
 
 # Snapshots (builds without tags)
-snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+# snapshot removed (was using deprecated name_template)
 
 # Changelog configuration
 changelog:
@@ -127,51 +120,9 @@ nfpms:
       group: Applications/Internet
       compression: lzma
 
-# Homebrew formula
-brews:
-  - name: email-sentinel
-
-    # Tap repository
-    repository:
-      owner: datateamsix
-      name: homebrew-tap
-      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-
-    # Commit configuration
-    commit_author:
-      name: goreleaserbot
-      email: bot@goreleaser.com
-
-    # Metadata
-    homepage: https://github.com/datateamsix/email-sentinel
-    description: "Monitor Gmail and get instant notifications on desktop and mobile"
-    license: MIT
-
-    # Install script
-    install: |
-      bin.install "email-sentinel"
-
-      # Install config templates
-      (etc/"email-sentinel").install "otp_rules.yaml"
-      (etc/"email-sentinel").install "rules.yaml"
-      (etc/"email-sentinel").install "app-config.yaml"
-      (etc/"email-sentinel").install "ai-config.yaml"
-
-    # Service configuration
-    service: |
-      run [opt_bin/"email-sentinel", "start", "--daemon"]
-      keep_alive true
-      log_path var/"log/email-sentinel.log"
-      error_log_path var/"log/email-sentinel.error.log"
-
-    # Test script
-    test: |
-      system "#{bin}/email-sentinel", "--version"
-
-    # Dependencies
-    dependencies:
-      - name: go
-        type: optional
+# Homebrew / cask and formula publishing omitted here to avoid deprecated
+# `brews` configuration. Add `homebrew_casks` or `homebrew` blocks when
+# ready to migrate to the current GoReleaser schema.
 
 # Scoop manifest (Windows package manager)
 scoops:
@@ -212,38 +163,8 @@ scoops:
 #       - name: "Email Sentinel"
 #         target: email-sentinel.exe
 
-# Docker images
-dockers:
-  - id: email-sentinel-docker
-
-    # Image names and tags
-    image_templates:
-      - "datateamsix/email-sentinel:latest"
-      - "datateamsix/email-sentinel:{{ .Version }}"
-      - "datateamsix/email-sentinel:{{ .Major }}"
-      - "datateamsix/email-sentinel:{{ .Major }}.{{ .Minor }}"
-
-    # Dockerfile configuration
-    dockerfile: Dockerfile
-
-    # Build arguments
-    build_flag_templates:
-      - "--pull"
-      - "--build-arg"
-      - "VERSION={{.Version}}"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--label=org.opencontainers.image.source={{.GitURL}}"
-      - "--platform=linux/amd64"
-
-    # Files to include
-    extra_files:
-      - otp_rules.yaml
-      - rules.yaml
-      - app-config.yaml
-      - ai-config.yaml
+# Docker image publishing removed to avoid deprecated `dockers` usage.
+# Reintroduce using `dockers_v2` when migrating to the newer schema.
 
 # GitHub Release configuration
 release:
@@ -324,6 +245,21 @@ source:
   enabled: true
   name_template: "{{ .ProjectName }}_{{ .Version }}_source"
   format: tar.gz
+
+# Explicit builds (limit locally to platforms we can build reliably here)
+builds:
+  - id: default
+    main: .
+    goos:
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X main.AppVersion={{.Version}} -X main.BuildTime={{.Date}} -X main.GitCommit={{.FullCommit}}
 
 # Git configuration
 git:

@@ -16,7 +16,7 @@ Stop checking email compulsively. Get instant alerts only for what matters.
 
 ## The Problem
 
-You're waiting for an important email (job response, client message, urgent alert), so you obsessively check your inbox every 5 minutes. This destroys your focus and productivity.
+You're waiting for an important email (job response, client message, urgent alert), so you obsessively check your inbox every 5 minutes or go digging for messages. This destroys your focus and productivity.
 
 ## The Solution
 

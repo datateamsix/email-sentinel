@@ -673,8 +673,9 @@
                 <img src="./images/go-night.svg" alt="Email Sentinel Gopher" class="hero-gopher">
             </div>
             <h1>Email Sentinel</h1>
-            <p class="tagline" style="font-size: 1.5rem; font-weight: 600;">Stop wasting time digging for emails. Get notified on the important stuff.</p>
-            <p class="tagline" style="margin-top: 10px;">Email notifications are blunt instruments. Email Sentinel is your simple, no-frills workhorse scalpel for cutting through the BS and noise of email.</p>
+            <p class="tagline" style="font-size: 2rem; font-weight: 700; margin-bottom: 15px;">Open the mail, not the mailbox.</p>
+            <p class="tagline" style="font-size: 1.2rem; font-weight: 400; margin-top: 0;">Stop wasting time digging for emails. Get notified on the important stuff.</p>
+            <p class="tagline" style="margin-top: 20px; font-size: 1.05rem;">Email notifications are blunt instruments. Email Sentinel is your simple, no-frills workhorse that fixes email noise—without becoming another thing to manage.</p>
             <p class="built-with-go">⚡ Built with Go — Fast, lightweight, single binary</p>
             <div class="cta-buttons">
                 <a href="https://github.com/datateamsix/email-sentinel/releases/latest" class="btn btn-primary">
@@ -701,6 +702,54 @@
                 <!-- Replace with actual video embed:
                 <iframe width="100%" height="500" src="https://www.youtube.com/embed/YOUR_VIDEO_ID" frameborder="0" allowfullscreen></iframe>
                 -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Sample Use Cases Section -->
+    <section class="use-cases">
+        <div class="container">
+            <h2 class="section-title">3 Sample Use Cases</h2>
+            <div class="use-case-grid">
+                <div class="use-case-card fade-in">
+                    <span class="use-case-icon"><i class="fas fa-bullseye"></i></span>
+                    <h3>Job Alerts</h3>
+                    <p>Stop refreshing LinkedIn every 10 minutes. Get instant alerts for interview invites, recruiter messages, and application updates—even when buried in promotions.</p>
+                    <div class="cli-example">
+<pre><code>email-sentinel filter add \
+  --name "Job Opportunities" \
+  --from "linkedin.com,greenhouse.io" \
+  --subject "interview,opportunity" \
+  --scope "inbox+promotions" \
+  --labels "career,urgent"</code></pre>
+                    </div>
+                </div>
+
+                <div class="use-case-card fade-in">
+                    <span class="use-case-icon"><i class="fas fa-lock"></i></span>
+                    <h3>OTP Codes</h3>
+                    <p>Stop switching between email and your login screen. Email Sentinel auto-extracts 2FA codes and copies them to your clipboard the second they arrive.</p>
+                    <div class="cli-example">
+<pre><code>email-sentinel filter add \
+  --name "Verification Codes" \
+  --from "noreply@github.com,google.com" \
+  --subject "verification,code,2fa" \
+  --labels "otp,security"</code></pre>
+                    </div>
+                </div>
+
+                <div class="use-case-card fade-in">
+                    <span class="use-case-icon"><i class="fas fa-star"></i></span>
+                    <h3>VIP Alerts</h3>
+                    <p>Your boss emails at 11 PM. You see it at 11:01. Never miss time-sensitive messages from executives, clients, or anyone who signs your paychecks.</p>
+                    <div class="cli-example">
+<pre><code>email-sentinel filter add \
+  --name "Boss & Execs" \
+  --from "ceo@company.com,boss@company.com" \
+  --scope inbox \
+  --labels "work,vip,urgent"</code></pre>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -803,54 +852,6 @@
                     <div class="feature-content">
                         <h4>100% Open Source</h4>
                         <p>MIT licensed, full source code available—audit, modify, or contribute freely</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Sample Use Cases Section -->
-    <section class="use-cases">
-        <div class="container">
-            <h2 class="section-title">3 Sample Use Cases</h2>
-            <div class="use-case-grid">
-                <div class="use-case-card fade-in">
-                    <span class="use-case-icon"><i class="fas fa-bullseye"></i></span>
-                    <h3>Job Alerts</h3>
-                    <p>Stop refreshing LinkedIn every 10 minutes. Get instant alerts for interview invites, recruiter messages, and application updates—even when buried in promotions.</p>
-                    <div class="cli-example">
-<pre><code>email-sentinel filter add \
-  --name "Job Opportunities" \
-  --from "linkedin.com,greenhouse.io" \
-  --subject "interview,opportunity" \
-  --scope "inbox+promotions" \
-  --labels "career,urgent"</code></pre>
-                    </div>
-                </div>
-
-                <div class="use-case-card fade-in">
-                    <span class="use-case-icon"><i class="fas fa-lock"></i></span>
-                    <h3>OTP Codes</h3>
-                    <p>Stop switching between email and your login screen. Email Sentinel auto-extracts 2FA codes and copies them to your clipboard the second they arrive.</p>
-                    <div class="cli-example">
-<pre><code>email-sentinel filter add \
-  --name "Verification Codes" \
-  --from "noreply@github.com,google.com" \
-  --subject "verification,code,2fa" \
-  --labels "otp,security"</code></pre>
-                    </div>
-                </div>
-
-                <div class="use-case-card fade-in">
-                    <span class="use-case-icon"><i class="fas fa-star"></i></span>
-                    <h3>VIP Alerts</h3>
-                    <p>Your boss emails at 11 PM. You see it at 11:01. Never miss time-sensitive messages from executives, clients, or anyone who signs your paychecks.</p>
-                    <div class="cli-example">
-<pre><code>email-sentinel filter add \
-  --name "Boss & Execs" \
-  --from "ceo@company.com,boss@company.com" \
-  --scope inbox \
-  --labels "work,vip,urgent"</code></pre>
                     </div>
                 </div>
             </div>

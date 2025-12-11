@@ -648,6 +648,25 @@
             font-size: 0.95rem;
         }
 
+        /* OTP Toast Demo Image */
+        .otp-demo {
+            padding: 60px 0;
+            background: var(--light);
+            text-align: center;
+        }
+
+        .otp-demo-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease;
+        }
+
+        .otp-demo-image:hover {
+            transform: scale(1.02);
+        }
+
         @media (max-width: 968px) {
             .warehousing-content {
                 grid-template-columns: 1fr;
@@ -751,6 +770,13 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </section>
+
+    <!-- OTP Demo Image -->
+    <section class="otp-demo">
+        <div class="container">
+            <img src="./images/otp-toast.png" alt="OTP Auto-Extract Demo" class="otp-demo-image">
         </div>
     </section>
 

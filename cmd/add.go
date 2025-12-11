@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -23,6 +24,7 @@ var (
 	filterMatch   string
 	filterLabels  string
 	filterScope   string
+	filterExpires string
 )
 
 var addCmd = &cobra.Command{
@@ -61,6 +63,7 @@ func init() {
 	addCmd.Flags().StringVarP(&filterMatch, "match", "m", "any", "Match mode: 'any' (OR) or 'all' (AND)")
 	addCmd.Flags().StringVarP(&filterLabels, "labels", "l", "", "Labels/categories (comma-separated, e.g., work,urgent)")
 	addCmd.Flags().StringVar(&filterScope, "scope", "inbox", "Gmail scope: inbox, all, primary, social, promotions, updates, forums, primary+social, all-except-trash")
+	addCmd.Flags().StringVarP(&filterExpires, "expires", "e", "", "Expiration: 1d, 7d, 30d, 60d, 90d, YYYY-MM-DD, or 'never' (default: never)")
 }
 
 func runFilterAdd(cmd *cobra.Command, args []string) {
@@ -182,6 +185,34 @@ func runFilterAdd(cmd *cobra.Command, args []string) {
 	// Validate and normalize scope
 	filterScope = normalizeGmailScope(filterScope)
 
+	// Get expiration (only ask if interactive and not already set)
+	if !cmd.Flags().Changed("expires") && interactive {
+		fmt.Println("\n⏰ Expiration (Optional)")
+		fmt.Println("   Set when this filter should automatically expire and be removed.")
+		fmt.Println("   Common presets:")
+		fmt.Println("   • 1d   - Expires in 1 day")
+		fmt.Println("   • 7d   - Expires in 7 days")
+		fmt.Println("   • 30d  - Expires in 30 days")
+		fmt.Println("   • 60d  - Expires in 60 days")
+		fmt.Println("   • 90d  - Expires in 90 days")
+		fmt.Println("   • Or specify a date: 2025-12-31")
+		fmt.Println("   • never - Never expires (default)")
+		fmt.Print("\nExpires (default: never): ")
+		input, _ := reader.ReadString('\n')
+		filterExpires = strings.TrimSpace(input)
+	}
+
+	// Parse expiration
+	var expiresAt *time.Time
+	if filterExpires != "" {
+		parsedTime, err := filter.ParseExpiration(filterExpires)
+		if err != nil {
+			fmt.Printf("\n❌ %v\n", err)
+			os.Exit(1)
+		}
+		expiresAt = parsedTime
+	}
+
 	// Create filter
 	f := filter.Filter{
 		Name:       filterName,
@@ -190,6 +221,7 @@ func runFilterAdd(cmd *cobra.Command, args []string) {
 		Match:      filterMatch,
 		Labels:     labelsList,
 		GmailScope: filterScope,
+		ExpiresAt:  expiresAt,
 	}
 
 	// Save filter
@@ -218,6 +250,7 @@ func runFilterAdd(cmd *cobra.Command, args []string) {
 	filterMatch = "any"
 	filterLabels = ""
 	filterScope = "inbox"
+	filterExpires = ""
 }
 
 func parseCSV(s string) []string {
@@ -262,6 +295,9 @@ func printFilter(f filter.Filter) {
 		scope = "inbox"
 	}
 	fmt.Printf("  Scope:   %s\n", scope)
+
+	// Show expiration
+	fmt.Printf("  Expires: %s\n", filter.FormatExpiration(f.ExpiresAt))
 }
 
 // getDB initializes and returns a database connection

@@ -204,6 +204,26 @@ func runFilterEdit(cmd *cobra.Command, args []string) {
 		}
 	}
 
+	// Edit expiration
+	currentExpiration := filter.FormatExpiration(selectedFilter.ExpiresAt)
+	fmt.Printf("\nExpiration [%s]: ", currentExpiration)
+	fmt.Println("\n   Options: 1d, 7d, 30d, 60d, 90d, YYYY-MM-DD, or 'never'")
+	fmt.Print("   Enter new value (or press Enter to keep current): ")
+	input, _ = reader.ReadString('\n')
+	input = strings.TrimSpace(input)
+	if input != "" {
+		if input == "-" || input == "none" || input == "never" {
+			selectedFilter.ExpiresAt = nil
+		} else {
+			parsedTime, err := filter.ParseExpiration(input)
+			if err != nil {
+				fmt.Printf("\n❌ %v\n", err)
+				os.Exit(1)
+			}
+			selectedFilter.ExpiresAt = parsedTime
+		}
+	}
+
 	// Update the filter
 	if err := filter.UpdateFilter(selectedIndex, *selectedFilter); err != nil {
 		fmt.Printf("\n❌ Error updating filter: %v\n", err)

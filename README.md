@@ -41,6 +41,7 @@ Email notifications are blunt instruments. Email Sentinel is your simple, no-fri
 - 📱 **Gmail Category Scopes** (inbox, social, promotions, etc.)
 - 🏷️ **Filter Labels** (organize by work, urgent, personal)
 - ⚡ **Priority Rules** (auto-detect urgent emails)
+- ⏰ **Filter Expiration** (auto-remove temporary filters with grace period)
 
 ---
 
@@ -96,13 +97,14 @@ email-sentinel init
 ### 4. Add Filter
 
 ```bash
-# Example: Get notified for job opportunities
+# Example: Get notified for job opportunities (expires in 30 days)
 email-sentinel filter add \
   --name "Job Alerts" \
   --from "linkedin.com,greenhouse.io,lever.co" \
   --subject "interview,opportunity,position" \
   --scope inbox \
-  --labels "work,career"
+  --labels "work,career" \
+  --expires 30d
 ```
 
 ### 5. Start Monitoring
@@ -149,19 +151,22 @@ Choose your platform for step-by-step setup:
 **The Solution:** Get instant alerts when recruiters reach out or job applications progress.
 
 ```bash
+# Temporary filter for active job search (expires in 60 days)
 email-sentinel filter add \
   --name "Job Opportunities" \
   --from "linkedin.com,greenhouse.io,lever.co,indeed.com,glassdoor.com" \
   --subject "interview,opportunity,position,application,recruiter" \
   --scope inbox \
-  --labels "career,urgent"
+  --labels "career,urgent" \
+  --expires 60d
 
-# Also check promotions where some recruiting emails land
+# Also check promotions where some recruiting emails land (expires in 60 days)
 email-sentinel filter add \
   --name "Job Promotions" \
   --from "linkedin.com,indeed.com,ziprecruiter.com" \
   --scope promotions \
-  --labels "career"
+  --labels "career" \
+  --expires 60d
 ```
 
 **What you'll catch:**
@@ -339,6 +344,63 @@ priority:
 ---
 
 ## 🔥 Advanced Features
+
+### Filter Expiration
+
+Set automatic expiration dates for temporary filters (perfect for job hunting, events, or time-limited projects):
+
+```bash
+# Expire after 7 days
+email-sentinel filter add \
+  --name "Conference Alerts" \
+  --subject "conference,event" \
+  --expires 7d
+
+# Expire on specific date
+email-sentinel filter add \
+  --name "Project Deadline" \
+  --from "client@company.com" \
+  --expires 2025-12-31
+
+# Never expires (default)
+email-sentinel filter add \
+  --name "Boss Emails" \
+  --from "boss@company.com"
+```
+
+**Available expiration options:**
+- `1d`, `7d`, `30d`, `60d`, `90d` - Quick presets
+- `YYYY-MM-DD` - Specific date
+- `never` or omit - Never expires (default)
+
+**How it works:**
+1. **Expiration** - Filter stops matching new emails
+2. **24-hour grace period** - Filter remains in list with warning
+3. **Auto-deletion** - Filter automatically removed after grace period
+4. **Desktop notification** - You're notified when filter expires
+
+**View expiration status:**
+```bash
+email-sentinel filter list
+# Shows: ⏰ expires in 5 days
+#        ⚠️ expired 2 hours ago (grace period)
+#        ♾️ never expires
+```
+
+**Edit expiration:**
+```bash
+email-sentinel filter edit "Filter Name"
+# Prompted to update expiration date
+```
+
+**Perfect for:**
+- Job searches (expire after hired)
+- Time-limited projects
+- Event monitoring
+- Temporary monitoring needs
+- Trial periods
+
+---
 
 ### Gmail Category Scopes
 
@@ -520,16 +582,20 @@ Benefits:
 
 ```bash
 # Add filter
-email-sentinel filter add [--name] [--from] [--subject] [--scope] [--labels] [--match]
+email-sentinel filter add [--name] [--from] [--subject] [--scope] [--labels] [--match] [--expires]
 
-# List filters
+# List filters (shows expiration status)
 email-sentinel filter list
 
-# Edit filter
+# Edit filter (includes expiration)
 email-sentinel filter edit [name]
 
 # Remove filter
 email-sentinel filter remove [name]
+
+# Expiration examples
+email-sentinel filter add --name "Temp" --from "x@y.com" --expires 7d    # 7 days
+email-sentinel filter add --name "Event" --subject "conf" --expires 2025-12-31  # Specific date
 ```
 
 ### Monitoring

@@ -62,21 +62,27 @@ email-sentinel status
 
 - **Sender** (`--from`): Email addresses or domains
 - **Subject** (`--subject`): Keywords in the subject line
-- **Gmail Scope** (`--scope`): Which Gmail categories to search (NEW)
+- **Gmail Scope** (`--scope`): Which Gmail categories to search
 - **Match Mode** (`--match`): How to combine conditions
   - `any` (OR): Trigger if sender OR subject matches
   - `all` (AND): Trigger only if sender AND subject both match
 - **Labels** (`--labels`): Organize filters by category (work, urgent, personal)
+- **Expiration** (`--expires`): Auto-remove filter after date (NEW)
+  - `1d`, `7d`, `30d`, `60d`, `90d` - Duration presets
+  - `YYYY-MM-DD` - Specific date
+  - `never` or omit - Never expires (default)
 
 **Example:**
 ```bash
+# Temporary filter with 30-day expiration
 email-sentinel filter add \
   --name "Job Alerts" \
   --from "linkedin.com,greenhouse.io" \
   --subject "interview,opportunity" \
   --scope inbox \
   --match any \
-  --labels "work,career"
+  --labels "work,career" \
+  --expires 30d
 ```
 
 ### Gmail Scopes

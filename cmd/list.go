@@ -77,6 +77,18 @@ func runFilterList(cmd *cobra.Command, args []string) {
 			scope = "inbox"
 		}
 		fmt.Printf("    Scope:   📬 %s\n", scope)
+
+		// Show expiration status
+		expirationStatus := filter.FormatExpiration(f.ExpiresAt)
+		if filter.IsInGracePeriod(f.ExpiresAt) {
+			fmt.Printf("    Expires: ⚠️  %s (grace period - will be deleted in <24hrs)\n", expirationStatus)
+		} else if filter.IsExpired(f.ExpiresAt) {
+			fmt.Printf("    Expires: ❌ %s (will be deleted)\n", expirationStatus)
+		} else if f.ExpiresAt != nil {
+			fmt.Printf("    Expires: ⏰ %s\n", expirationStatus)
+		} else {
+			fmt.Printf("    Expires: ♾️  %s\n", expirationStatus)
+		}
 	}
 
 	fmt.Println("")

@@ -829,14 +829,15 @@
                 <div class="use-case-card fade-in">
                     <span class="use-case-icon"><i class="fas fa-bullseye"></i></span>
                     <h3>Job Alerts</h3>
-                    <p>Stop refreshing LinkedIn every 10 minutes. Get instant alerts for interview invites, recruiter messages, and application updates—even when buried in promotions.</p>
+                    <p>Stop refreshing LinkedIn every 10 minutes. Get instant alerts for interview invites, recruiter messages, and application updates—even when buried in promotions. Auto-expires after 60 days.</p>
                     <div class="cli-example">
 <pre><code>email-sentinel filter add \
   --name "Job Opportunities" \
   --from "linkedin.com,greenhouse.io" \
   --subject "interview,opportunity" \
   --scope "inbox+promotions" \
-  --labels "career,urgent"</code></pre>
+  --labels "career,urgent" \
+  --expires 60d</code></pre>
                     </div>
                 </div>
 
@@ -929,6 +930,14 @@
                     <div class="feature-content">
                         <h4>Gmail Category Scopes</h4>
                         <p>Monitor inbox, social, promotions, spam—rescue important emails from anywhere</p>
+                    </div>
+                </div>
+
+                <div class="feature-item fade-in">
+                    <span class="feature-check"><i class="fas fa-check-circle"></i></span>
+                    <div class="feature-content">
+                        <h4>Filter Expiration</h4>
+                        <p>Auto-remove temporary filters after 1-90 days with 24hr grace period—perfect for job searches & events</p>
                     </div>
                 </div>
 

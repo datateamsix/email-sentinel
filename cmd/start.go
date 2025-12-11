@@ -96,9 +96,15 @@ func runStart(cmd *cobra.Command, args []string) {
 	}
 
 	if len(cfg.Filters) == 0 {
-		fmt.Println("❌ No filters configured.")
-		fmt.Println("\nAdd filters with: email-sentinel filter add")
-		os.Exit(1)
+		fmt.Println("⚠️  No filters configured yet.")
+		fmt.Println("\n📝 You can add filters in several ways:")
+		fmt.Println("   • Command line: email-sentinel filter add")
+		fmt.Println("   • Interactive menu: email-sentinel menu")
+		if trayMode {
+			fmt.Println("   • System tray: Right-click the tray icon > Manage Filters")
+		}
+		fmt.Println("\n▶️  Starting monitoring service (no matches will trigger until you add filters)...")
+		fmt.Println()
 	}
 
 	// Load credentials
@@ -256,6 +262,26 @@ func runStart(cmd *cobra.Command, args []string) {
 	for {
 		select {
 		case <-ticker.C:
+			// Check for expired filters and clean them up
+			removed, err := filter.CleanupExpiredFilters()
+			if err != nil {
+				fmt.Printf("⚠️  Error checking for expired filters: %v\n", err)
+			} else if len(removed) > 0 {
+				for _, name := range removed {
+					fmt.Printf("🗑️  Filter '%s' expired and was automatically removed\n", name)
+					// Send notification about expired filter
+					notify.SendDesktopNotification(
+						"Filter Expired",
+						fmt.Sprintf("Filter '%s' has expired and been removed", name),
+					)
+				}
+				// Reload config since filters were removed
+				cfg, err = filter.LoadConfig()
+				if err != nil {
+					fmt.Printf("⚠️  Error reloading config after cleanup: %v\n", err)
+				}
+			}
+
 			// Circuit breaker: implement exponential backoff on repeated failures
 			if failureCount > 0 && time.Since(lastFailureTime) < backoffDuration {
 				fmt.Printf("[%s] Backing off due to %d consecutive failures... waiting %v\n",
@@ -505,7 +531,7 @@ func processFilterMatch(msg *googlemail.Message, email *gmail.EmailMessage, matc
 
 	// Create and save alert
 	alert := createAlert(msg, email, match, priority)
-	saveAndNotifyAlert(db, alert)
+	saveAndNotifyAlert(db, alert, cfg)
 
 	// Generate AI summary asynchronously if enabled
 	if aiService != nil {
@@ -513,15 +539,9 @@ func processFilterMatch(msg *googlemail.Message, email *gmail.EmailMessage, matc
 	}
 }
 
-// sendNotificationsForMatch sends desktop and mobile notifications for a matched filter
+// sendNotificationsForMatch sends mobile notifications for a matched filter
+// Desktop notifications are handled by saveAndNotifyAlert() to avoid duplicates
 func sendNotificationsForMatch(match filter.MatchResult, email *gmail.EmailMessage, cfg *filter.Config) {
-	// Send desktop notification with labels
-	if cfg.Notifications.Desktop {
-		if err := notify.SendEmailAlertWithLabels(match.Name, match.Labels, email.From, email.Subject); err != nil {
-			fmt.Printf("   ⚠️  Desktop notification failed: %v\n", err)
-		}
-	}
-
 	// Send mobile notification with labels
 	if cfg.Notifications.Mobile.Enabled && cfg.Notifications.Mobile.NtfyTopic != "" {
 		if err := notify.SendMobileEmailAlertWithLabels(
@@ -564,17 +584,19 @@ func createAlert(msg *googlemail.Message, email *gmail.EmailMessage, match filte
 }
 
 // saveAndNotifyAlert saves an alert to the database and sends system notifications
-func saveAndNotifyAlert(db *sql.DB, alert *storage.Alert) {
+func saveAndNotifyAlert(db *sql.DB, alert *storage.Alert, cfg *filter.Config) {
 	// Save alert with retry logic to prevent data loss
 	if err := storage.InsertAlertWithRetry(db, alert); err != nil {
 		// Critical: Even retry and fallback failed
 		fmt.Printf("   ❌ CRITICAL: Failed to save alert (retry + fallback failed): %v\n", err)
 	}
 
-	// Send Windows toast notification (in addition to existing notifications)
-	// This provides a rich, clickable notification in Windows Action Center
-	if err := notify.SendAlertNotification(*alert); err != nil {
-		fmt.Printf("   ⚠️  Toast notification failed: %v\n", err)
+	// Send desktop notification (Windows toast or Unix notification) if enabled
+	// This provides a rich, platform-specific notification with AI summaries
+	if cfg.Notifications.Desktop {
+		if err := notify.SendAlertNotification(*alert); err != nil {
+			fmt.Printf("   ⚠️  Desktop notification failed: %v\n", err)
+		}
 	}
 
 	// Update system tray if enabled

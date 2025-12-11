@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/datateamsix/email-sentinel/internal/filter"
 	"github.com/datateamsix/email-sentinel/internal/storage"
 )
 
@@ -387,9 +389,7 @@ func buildFilterMenu() *Menu {
 	})
 
 	menu.AddItem("3", "🗑️", "Remove Filter", "Delete a filter", func() error {
-		PrintSection("Remove Filter")
-		PrintWarning("Removing filter...")
-		return nil
+		return handleRemoveFilter()
 	})
 
 	menu.AddItem("4", "📋", "List Filters", "View all filters", func() error {
@@ -499,6 +499,69 @@ func buildSettingsMenu() *Menu {
 	})
 
 	return menu
+}
+
+// handleRemoveFilter handles the interactive filter removal process
+func handleRemoveFilter() error {
+	PrintSection("Remove Filter")
+	reader := bufio.NewReader(os.Stdin)
+
+	// Load all filters
+	filters, err := filter.ListFilters()
+	if err != nil {
+		PrintError(fmt.Sprintf("Error loading filters: %v", err))
+		return err
+	}
+
+	if len(filters) == 0 {
+		fmt.Println()
+		PrintInfo("No filters to remove")
+		return nil
+	}
+
+	// Display filters
+	fmt.Println()
+	PrintInfo("Select a filter to remove:")
+	fmt.Println()
+
+	for i, f := range filters {
+		fmt.Printf("  [%d] %s\n", i+1, f.Name)
+	}
+
+	// Get selection
+	fmt.Println()
+	ColorGreen.Print("Enter number: ")
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(input)
+
+	num, err := strconv.Atoi(input)
+	if err != nil || num < 1 || num > len(filters) {
+		PrintError("Invalid selection")
+		return fmt.Errorf("invalid selection")
+	}
+
+	filterName := filters[num-1].Name
+
+	// Confirm deletion
+	fmt.Println()
+	ColorYellow.Printf("Remove filter '%s'? (y/N): ", filterName)
+	confirm, _ := reader.ReadString('\n')
+	confirm = strings.TrimSpace(strings.ToLower(confirm))
+
+	if confirm != "y" && confirm != "yes" {
+		PrintInfo("Cancelled")
+		return nil
+	}
+
+	// Remove filter
+	if err := filter.RemoveFilter(filterName); err != nil {
+		PrintError(fmt.Sprintf("Error: %v", err))
+		return err
+	}
+
+	fmt.Println()
+	PrintSuccess(fmt.Sprintf("Filter '%s' removed successfully!", filterName))
+	return nil
 }
 
 // RunInteractiveMenu starts the main interactive menu

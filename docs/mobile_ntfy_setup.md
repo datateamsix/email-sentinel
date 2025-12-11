@@ -1,6 +1,6 @@
 # 📱 Mobile Push Notifications Setup (ntfy.sh)
 
-![Email Sentinel Logo](../images/logo.png)
+![Email Sentinel Logo](./images/logo.png)
 
 Complete guide to setting up free mobile push notifications for Email Sentinel using [ntfy.sh](https://ntfy.sh).
 

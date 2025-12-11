@@ -245,7 +245,7 @@ release:
   # Extra files to include in release
   extra_files:
     - glob: ./docs/*.md
-    - glob: ./images/*.png
+    - glob: ./docs/images/*.png
 
 # Announce releases (optional - requires tokens)
 # Uncomment when ready to enable

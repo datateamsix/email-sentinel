@@ -1,6 +1,6 @@
 # Email Sentinel CLI Guide
 
-![Email Sentinel Logo](../images/logo.png)
+![Email Sentinel Logo](./images/logo.png)
 
 A comprehensive guide to using the Email Sentinel command-line interface for monitoring Gmail and receiving real-time notifications.
 

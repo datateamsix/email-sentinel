@@ -1,6 +1,6 @@
 # Linux Quickstart Guide
 
-![Email Sentinel Logo](../images/logo.png)
+![Email Sentinel Logo](./images/logo.png)
 
 Complete guide for installing, configuring, and running Email Sentinel on Linux distributions.
 

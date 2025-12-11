@@ -1,6 +1,6 @@
 # 🚀 Setup Guide - DEPRECATED
 
-![Email Sentinel Logo](../images/logo.png)
+![Email Sentinel Logo](./images/logo.png)
 
 ---
 

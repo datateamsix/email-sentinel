@@ -1,6 +1,6 @@
 # 🔐 Gmail API & Google Cloud Platform Setup
 
-![Email Sentinel Logo](../images/logo.png)
+![Email Sentinel Logo](./images/logo.png)
 
 Complete step-by-step guide to setting up Gmail API access for Email Sentinel.
 

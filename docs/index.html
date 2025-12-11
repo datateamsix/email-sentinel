@@ -482,46 +482,124 @@
             }
         }
 
-        /* Why Go Section */
-        .why-go {
+        /* Email Warehousing Section */
+        .email-warehousing {
             padding: 100px 0;
             background: white;
         }
 
-        .go-benefits {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 40px;
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-
-        .go-benefit {
+        .section-subtitle {
             text-align: center;
-            padding: 30px;
+            font-size: 1.3rem;
+            color: var(--text);
+            margin-bottom: 60px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
-        .go-icon {
-            font-size: 3.5rem;
-            margin-bottom: 20px;
+        .warehousing-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: start;
         }
 
-        .go-benefit h3 {
-            font-size: 1.5rem;
-            margin-bottom: 15px;
+        .warehousing-diagram {
+            position: sticky;
+            top: 100px;
+        }
+
+        .diagram-image {
+            width: 100%;
+            height: auto;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        }
+
+        .warehousing-info h3 {
+            font-size: 1.8rem;
+            margin: 30px 0 15px;
             color: var(--dark);
             font-weight: 600;
         }
 
-        .go-benefit p {
-            color: var(--text);
-            line-height: 1.7;
-            font-size: 1rem;
+        .warehousing-info h3:first-child {
+            margin-top: 0;
         }
 
-        @media (max-width: 768px) {
-            .go-benefits {
+        .warehousing-info p {
+            color: var(--text);
+            line-height: 1.8;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+
+        .benefit-list {
+            margin: 20px 0;
+        }
+
+        .benefit-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            font-size: 1.05rem;
+            color: var(--text);
+        }
+
+        .benefit-icon {
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+
+        .setup-steps {
+            margin: 20px 0;
+            padding-left: 25px;
+        }
+
+        .setup-steps li {
+            margin-bottom: 15px;
+            color: var(--text);
+            line-height: 1.7;
+            font-size: 1.05rem;
+        }
+
+        .setup-steps code {
+            background: var(--light);
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.95rem;
+            color: var(--primary);
+        }
+
+        .learn-more-btn {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 15px 30px;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+
+        .learn-more-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+        }
+
+        @media (max-width: 968px) {
+            .warehousing-content {
                 grid-template-columns: 1fr;
+                gap: 40px;
+            }
+            .warehousing-diagram {
+                position: static;
             }
             .hero-gopher {
                 width: 140px;
@@ -534,7 +612,7 @@
     <header>
         <div class="container hero-content">
             <div class="logo-container">
-                <img src="../images/go-night.svg" alt="Email Sentinel Gopher" class="hero-gopher">
+                <img src="./images/go-night.svg" alt="Email Sentinel Gopher" class="hero-gopher">
             </div>
             <h1>Email Sentinel</h1>
             <p class="tagline" style="font-size: 1.5rem; font-weight: 600;">Stop wasting time digging for emails. Get notified on the important stuff.</p>
@@ -622,30 +700,56 @@
         </div>
     </section>
 
-    <!-- Why Go Section -->
-    <section class="why-go">
+    <!-- Email Warehousing Section -->
+    <section class="email-warehousing">
         <div class="container">
-            <h2 class="section-title">Why Go?</h2>
-            <div class="go-benefits">
-                <div class="go-benefit fade-in">
-                    <div class="go-icon">🚀</div>
-                    <h3>Lightning Fast</h3>
-                    <p>Compiled binary starts instantly. No runtime dependencies. Just double-click and run.</p>
+            <h2 class="section-title">Create A Smart Email Warehousing System</h2>
+            <p class="section-subtitle">Monitor unlimited email accounts through one central Gmail inbox</p>
+
+            <div class="warehousing-content">
+                <div class="warehousing-diagram">
+                    <img src="./images/central-email-warehousing.png" alt="Central Email Warehousing System" class="diagram-image">
                 </div>
-                <div class="go-benefit fade-in">
-                    <div class="go-icon">📦</div>
-                    <h3>Single Binary</h3>
-                    <p>Everything in one file. No installers, no package managers needed. Download and go.</p>
-                </div>
-                <div class="go-benefit fade-in">
-                    <div class="go-icon">💾</div>
-                    <h3>Tiny Footprint</h3>
-                    <p>Uses ~30MB RAM idle. Won't slow down your system. Runs quietly in the background.</p>
-                </div>
-                <div class="go-benefit fade-in">
-                    <div class="go-icon">🌐</div>
-                    <h3>True Cross-Platform</h3>
-                    <p>Same codebase for Windows, macOS, and Linux. Intel and ARM. No compromises.</p>
+
+                <div class="warehousing-info">
+                    <h3>What Is Email Warehousing?</h3>
+                    <p>Instead of connecting multiple email accounts to Email Sentinel, you forward important emails from all your accounts (work, personal, client) into one central Gmail inbox. Email Sentinel monitors that single inbox.</p>
+
+                    <h3>Why Use It?</h3>
+                    <div class="benefit-list">
+                        <div class="benefit-item">
+                            <span class="benefit-icon">✅</span>
+                            <span>One OAuth authentication, unlimited accounts</span>
+                        </div>
+                        <div class="benefit-item">
+                            <span class="benefit-icon">✅</span>
+                            <span>Unified monitoring of all important messages</span>
+                        </div>
+                        <div class="benefit-item">
+                            <span class="benefit-icon">✅</span>
+                            <span>Original sender info preserved in forwards</span>
+                        </div>
+                        <div class="benefit-item">
+                            <span class="benefit-icon">✅</span>
+                            <span>Multi-stage filtering (email client → Gmail → Sentinel)</span>
+                        </div>
+                        <div class="benefit-item">
+                            <span class="benefit-icon">✅</span>
+                            <span>No complex multi-account OAuth setup</span>
+                        </div>
+                    </div>
+
+                    <h3>Quick Setup</h3>
+                    <ol class="setup-steps">
+                        <li>Create a new Gmail account (e.g., <code>my-alerts-hub@gmail.com</code>)</li>
+                        <li>Set up email forwarding from your other accounts (Gmail, Outlook, iCloud, etc.)</li>
+                        <li>Connect Email Sentinel to your central inbox: <code>email-sentinel init</code></li>
+                        <li>Add filters to catch forwarded emails from specific sources</li>
+                    </ol>
+
+                    <a href="https://github.com/datateamsix/email-sentinel/blob/main/docs/CENTRAL_EMAIL_SETUP.md" class="learn-more-btn" target="_blank">
+                        📖 Full Setup Guide →
+                    </a>
                 </div>
             </div>
         </div>

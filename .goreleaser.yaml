@@ -120,8 +120,8 @@ nfpms:
       group: Applications/Internet
       compression: lzma
 
-# Homebrew formula (macOS)
-homebrew:
+# Homebrew formula (macOS) - use brews for compatibility
+brews:
   - name: email-sentinel
     repository:
       owner: datateamsix
@@ -139,8 +139,8 @@ homebrew:
     test: |
       system "#{bin}/email-sentinel", "--version"
 
-# Docker images using modern v2 schema
-dockers_v2:
+# Docker images
+dockers:
   - id: email-sentinel
     image_templates:
       - "datateamsix/email-sentinel:latest"
@@ -156,8 +156,6 @@ dockers_v2:
       - "--label=org.opencontainers.image.version={{.Version}}"
       - "--label=org.opencontainers.image.source={{.GitURL}}"
     dockerfile: Dockerfile
-    goos: linux
-    goarch: amd64
 
 # Scoop manifest (Windows package manager)
 scoops:

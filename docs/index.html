@@ -712,40 +712,55 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.08);
         }
 
-        .requirements-list ol {
-            list-style-position: outside;
-            padding-left: 25px;
-            margin: 0;
+        .requirement-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
         }
 
-        .requirements-list li {
-            font-size: 1.15rem;
-            line-height: 1.8;
-            margin-bottom: 20px;
-            color: var(--dark);
-        }
-
-        .requirements-list li:last-child {
+        .requirement-item:last-child {
             margin-bottom: 0;
         }
 
-        .requirements-list a {
+        .requirement-item:hover {
+            background: white;
+            transform: translateX(5px);
+        }
+
+        .requirement-check {
+            font-size: 1.5rem;
+            color: var(--secondary);
+            flex-shrink: 0;
+            margin-top: 3px;
+        }
+
+        .requirement-content h4 {
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+            color: var(--dark);
+            font-weight: 600;
+        }
+
+        .requirement-content p {
+            color: var(--text);
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        .requirement-content a {
             color: var(--primary);
             text-decoration: none;
             font-weight: 600;
             transition: color 0.2s ease;
         }
 
-        .requirements-list a:hover {
+        .requirement-content a:hover {
             color: var(--secondary);
             text-decoration: underline;
-        }
-
-        .requirements-list .note {
-            font-size: 0.95rem;
-            color: var(--text);
-            margin-top: 5px;
-            display: block;
         }
 
         @media (max-width: 968px) {
@@ -1052,20 +1067,29 @@
         <div class="container">
             <h2>Basic App Requirements</h2>
             <div class="requirements-list">
-                <ol>
-                    <li>
-                        <strong>Gmail account</strong>
-                        <span class="note">A Gmail account to monitor (can be existing or new dedicated account)</span>
-                    </li>
-                    <li>
-                        <strong>Google Cloud Platform (GCP) account</strong>
-                        <span class="note">Free to create. Requires billing info, but Gmail API free tier covers typical usage. <a href="./GMAIL_API_GCP_SETUP.md" target="_blank">Follow this setup guide</a> for Gmail API configuration.</span>
-                    </li>
-                    <li>
-                        <strong>Go installation</strong>
-                        <span class="note">Required for building from source. <a href="https://go.dev/doc/install" target="_blank">Download and install Go</a> from the official website.</span>
-                    </li>
-                </ol>
+                <div class="requirement-item">
+                    <span class="requirement-check"><i class="fas fa-check-circle"></i></span>
+                    <div class="requirement-content">
+                        <h4>Gmail account</h4>
+                        <p>A Gmail account to monitor (can be existing or new dedicated account)</p>
+                    </div>
+                </div>
+
+                <div class="requirement-item">
+                    <span class="requirement-check"><i class="fas fa-check-circle"></i></span>
+                    <div class="requirement-content">
+                        <h4>Google Cloud Platform (GCP) account</h4>
+                        <p>Free to create. Requires billing info, but Gmail API free tier covers typical usage. <a href="https://github.com/datateamsix/email-sentinel/blob/main/docs/GMAIL_API_GCP_SETUP.md" target="_blank">Follow this setup guide</a> for Gmail API configuration.</p>
+                    </div>
+                </div>
+
+                <div class="requirement-item">
+                    <span class="requirement-check"><i class="fas fa-check-circle"></i></span>
+                    <div class="requirement-content">
+                        <h4>Go installation</h4>
+                        <p>Required for building from source. <a href="https://go.dev/doc/install" target="_blank">Download and install Go</a> from the official website.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </section>

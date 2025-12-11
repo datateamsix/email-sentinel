@@ -120,14 +120,22 @@ func (c *Client) RefreshTokenIfNeeded() error {
 
 // GetRecentMessages fetches recent messages from the inbox with retry logic
 // maxResults specifies the maximum number of messages to retrieve
+// Defaults to searching only the inbox (in:inbox)
 func (c *Client) GetRecentMessages(maxResults int64) ([]*gmail.Message, error) {
+	return c.GetRecentMessagesWithQuery(maxResults, "in:inbox")
+}
+
+// GetRecentMessagesWithQuery fetches recent messages with a custom Gmail search query
+// maxResults specifies the maximum number of messages to retrieve
+// searchQuery uses Gmail search syntax (e.g., "in:inbox", "-in:trash", "", etc.)
+func (c *Client) GetRecentMessagesWithQuery(maxResults int64, searchQuery string) ([]*gmail.Message, error) {
 	const maxRetries = 3
 	const baseDelay = 2 * time.Second
 
 	var lastErr error
 
 	for attempt := 0; attempt < maxRetries; attempt++ {
-		messages, err := c.getRecentMessagesOnce(maxResults)
+		messages, err := c.getRecentMessagesOnce(maxResults, searchQuery)
 		if err == nil {
 			return messages, nil
 		}
@@ -152,7 +160,7 @@ func (c *Client) GetRecentMessages(maxResults int64) ([]*gmail.Message, error) {
 }
 
 // getRecentMessagesOnce fetches messages without retry logic
-func (c *Client) getRecentMessagesOnce(maxResults int64) ([]*gmail.Message, error) {
+func (c *Client) getRecentMessagesOnce(maxResults int64, searchQuery string) ([]*gmail.Message, error) {
 	user := "me"
 
 	// Refresh token if needed before making API call
@@ -160,10 +168,13 @@ func (c *Client) getRecentMessagesOnce(maxResults int64) ([]*gmail.Message, erro
 		return nil, err
 	}
 
-	// List message IDs
-	listCall := c.service.Users.Messages.List(user).
-		MaxResults(maxResults).
-		Q("in:inbox") // Only inbox messages
+	// List message IDs with custom search query
+	listCall := c.service.Users.Messages.List(user).MaxResults(maxResults)
+
+	// Only add query if it's not empty
+	if searchQuery != "" {
+		listCall = listCall.Q(searchQuery)
+	}
 
 	response, err := listCall.Do()
 	if err != nil {

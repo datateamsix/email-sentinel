@@ -62,6 +62,7 @@ email-sentinel status
 
 - **Sender** (`--from`): Email addresses or domains
 - **Subject** (`--subject`): Keywords in the subject line
+- **Gmail Scope** (`--scope`): Which Gmail categories to search (NEW)
 - **Match Mode** (`--match`): How to combine conditions
   - `any` (OR): Trigger if sender OR subject matches
   - `all` (AND): Trigger only if sender AND subject both match
@@ -73,9 +74,56 @@ email-sentinel filter add \
   --name "Job Alerts" \
   --from "linkedin.com,greenhouse.io" \
   --subject "interview,opportunity" \
+  --scope inbox \
   --match any \
   --labels "work,career"
 ```
+
+### Gmail Scopes
+
+**Gmail scopes** let you target specific Gmail categories for each filter, reducing unnecessary API calls and improving performance.
+
+**Available Scopes:**
+
+| Scope | Description | Use Case |
+|-------|-------------|----------|
+| `inbox` | Primary inbox only (default) | Most email filters |
+| `primary` | Primary category | Important personal/business emails |
+| `social` | Social category | Facebook, Twitter, LinkedIn notifications |
+| `promotions` | Promotions category | Marketing emails, newsletters |
+| `updates` | Updates category | Receipts, confirmations, statements |
+| `forums` | Forums category | Mailing lists, discussion groups |
+| `all` | All mail including spam | Broad monitoring |
+| `all-except-trash` | Everything except trash | Wide scope excluding deleted |
+| `primary+social` | Multiple categories | Combine with `+` separator |
+
+**Examples:**
+
+```bash
+# Monitor social category only
+email-sentinel filter add \
+  --name "Social Notifications" \
+  --from "facebook.com,twitter.com" \
+  --scope social \
+  --labels "social"
+
+# Monitor multiple categories
+email-sentinel filter add \
+  --name "Updates & Receipts" \
+  --subject "receipt,confirmation,order" \
+  --scope "primary+updates" \
+  --labels "receipts"
+
+# Global scope override (ignores per-filter scopes)
+email-sentinel start --tray --search social
+```
+
+**How It Works:**
+
+- Each filter searches only its specified Gmail category
+- Messages are deduplicated across filters
+- More efficient than searching all mail
+- Reduces Gmail API quota usage
 
 ### Priority Rules
 
@@ -183,6 +231,7 @@ email-sentinel filter add \
 | `--name` | `-n` | Yes | Filter name | `"Job Alerts"` |
 | `--from` | `-f` | No | Sender patterns (comma-separated) | `"linkedin.com,@github.com"` |
 | `--subject` | `-s` | No | Subject keywords (comma-separated) | `"urgent,asap"` |
+| `--scope` | | No | Gmail scope/category (default: `inbox`) | `social`, `primary+updates` |
 | `--match` | `-m` | No | Match mode: `any` or `all` (default: `any`) | `any` |
 | `--labels` | `-l` | No | Labels/categories (comma-separated) | `"work,urgent"` |
 

@@ -175,6 +175,20 @@ func runFilterEdit(cmd *cobra.Command, args []string) {
 		db.Close()
 	}
 
+	// Edit Gmail scope
+	currentScope := selectedFilter.GmailScope
+	if currentScope == "" {
+		currentScope = "inbox"
+	}
+	fmt.Printf("\nGmail Scope [%s]: ", currentScope)
+	fmt.Println("\n   Options: inbox, all, primary, social, promotions, updates, forums, primary+social, all-except-trash")
+	fmt.Print("   Enter new value: ")
+	input, _ = reader.ReadString('\n')
+	input = strings.TrimSpace(input)
+	if input != "" {
+		selectedFilter.GmailScope = normalizeGmailScope(input)
+	}
+
 	// Edit match mode (only if both from and subject exist)
 	if len(selectedFilter.From) > 0 && len(selectedFilter.Subject) > 0 {
 		fmt.Printf("\nMatch mode - 'any' (OR) or 'all' (AND) [%s]: ", selectedFilter.Match)

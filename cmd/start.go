@@ -31,6 +31,7 @@ var daemonMode bool
 var trayMode bool
 var cleanupInterval int // in minutes
 var aiSummaryEnabled bool
+var searchScope string // Gmail search scope (inbox, all, all-except-trash, spam-only)
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
@@ -45,9 +46,19 @@ When a match is found, notifications are sent via:
 The monitoring runs continuously, checking Gmail at regular intervals
 defined in your configuration (default: 45 seconds).
 
+Gmail Scope:
+Each filter can specify which Gmail categories to search (inbox, primary,
+social, promotions, etc.). The --search flag overrides all per-filter scopes.
+
 Examples:
-  # Run in foreground with logs
+  # Run in foreground with logs (uses per-filter scopes)
   email-sentinel start
+
+  # Run with system tray
+  email-sentinel start --tray
+
+  # Override all filters to search only social category
+  email-sentinel start --search social
 
   # Run as background daemon
   email-sentinel start --daemon`,
@@ -60,6 +71,7 @@ func init() {
 	startCmd.Flags().BoolVarP(&trayMode, "tray", "t", false, "Run with system tray icon")
 	startCmd.Flags().IntVar(&cleanupInterval, "cleanup-interval", 60, "Auto-cleanup interval in minutes (0=disabled, default=60)")
 	startCmd.Flags().BoolVar(&aiSummaryEnabled, "ai-summary", false, "Enable AI-powered email summaries")
+	startCmd.Flags().StringVar(&searchScope, "search", "", "Override filter scopes with global search: inbox, all, primary, social, promotions, updates, forums, all-except-trash")
 }
 
 func runStart(cmd *cobra.Command, args []string) {
@@ -208,6 +220,15 @@ func runStart(cmd *cobra.Command, args []string) {
 		time.Sleep(2 * time.Second)
 	}
 
+	// Build Gmail search query from scope flag (if provided)
+	var gmailSearchQuery string
+	if searchScope != "" {
+		gmailSearchQuery = buildGmailSearchQuery(searchScope)
+		fmt.Printf("   Global search override: %s (query: '%s')\n", searchScope, gmailSearchQuery)
+	} else {
+		fmt.Println("   Using per-filter Gmail scopes")
+	}
+
 	fmt.Println("\n🔍 Watching for new emails... (Press Ctrl+C to stop)")
 	fmt.Println("")
 
@@ -227,7 +248,7 @@ func runStart(cmd *cobra.Command, args []string) {
 	)
 
 	// Do initial check
-	if err := checkEmailsWithRecovery(client, cfg, seenMessages, db, priorityRules, aiService); err != nil {
+	if err := checkEmailsWithRecovery(client, cfg, seenMessages, db, priorityRules, aiService, gmailSearchQuery); err != nil {
 		failureCount++
 		lastFailureTime = time.Now()
 	}
@@ -243,7 +264,7 @@ func runStart(cmd *cobra.Command, args []string) {
 			}
 
 			// Attempt email check with recovery
-			if err := checkEmailsWithRecovery(client, cfg, seenMessages, db, priorityRules, aiService); err != nil {
+			if err := checkEmailsWithRecovery(client, cfg, seenMessages, db, priorityRules, aiService, gmailSearchQuery); err != nil {
 				failureCount++
 				lastFailureTime = time.Now()
 
@@ -285,7 +306,33 @@ func min(a, b int) int {
 }
 
 // checkEmailsWithRecovery wraps checkEmails with panic recovery
-func checkEmailsWithRecovery(client *gmail.Client, cfg *filter.Config, seenMessages *state.SeenMessages, db *sql.DB, priorityRules *rules.Rules, aiService *ai.Service) (err error) {
+// buildGmailSearchQuery converts a search scope string to a Gmail search query
+func buildGmailSearchQuery(scope string) string {
+	switch strings.ToLower(scope) {
+	case "all":
+		return "" // Empty query = search everything
+	case "all-except-trash":
+		return "-in:trash"
+	case "spam-only":
+		return "in:spam"
+	case "promotions":
+		return "category:promotions"
+	case "social":
+		return "category:social"
+	case "updates":
+		return "category:updates"
+	case "forums":
+		return "category:forums"
+	case "inbox":
+		return "in:inbox"
+	default:
+		// Default to inbox if unknown scope
+		fmt.Printf("⚠️  Unknown search scope '%s', defaulting to 'inbox'\n", scope)
+		return "in:inbox"
+	}
+}
+
+func checkEmailsWithRecovery(client *gmail.Client, cfg *filter.Config, seenMessages *state.SeenMessages, db *sql.DB, priorityRules *rules.Rules, aiService *ai.Service, searchQuery string) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("panic in checkEmails: %v", r)
@@ -293,7 +340,7 @@ func checkEmailsWithRecovery(client *gmail.Client, cfg *filter.Config, seenMessa
 		}
 	}()
 
-	return checkEmails(client, cfg, seenMessages, db, priorityRules, aiService)
+	return checkEmails(client, cfg, seenMessages, db, priorityRules, aiService, searchQuery)
 }
 
 // createAIConfigFromAppConfig converts the unified AppConfig to the AI config format
@@ -344,17 +391,54 @@ func createAIConfigFromAppConfig(appCfg *appconfig.AppConfig) *ai.Config {
 	}
 }
 
-func checkEmails(client *gmail.Client, cfg *filter.Config, seenMessages *state.SeenMessages, db *sql.DB, priorityRules *rules.Rules, aiService *ai.Service) error {
-	// Fetch recent messages
-	messages, err := client.GetRecentMessages(10)
+func checkEmails(client *gmail.Client, cfg *filter.Config, seenMessages *state.SeenMessages, db *sql.DB, priorityRules *rules.Rules, aiService *ai.Service, searchQuery string) error {
+	// Get all unique scopes from filters for optimized fetching
+	uniqueScopes, err := filter.GetAllUniqueScopes()
 	if err != nil {
-		fmt.Printf("⚠️  Error fetching messages: %v\n", err)
+		fmt.Printf("⚠️  Error getting filter scopes: %v\n", err)
 		return err
+	}
+
+	// If global search query is provided (via --search flag), use it
+	// Otherwise, fetch messages for each unique scope
+	var allMessages []*googlemail.Message
+	var fetchErr error
+
+	if searchQuery != "" {
+		// Global scope override from command line flag
+		allMessages, fetchErr = client.GetRecentMessagesWithQuery(10, searchQuery)
+	} else {
+		// Fetch messages for each unique filter scope
+		messageMap := make(map[string]*googlemail.Message)
+		for _, scope := range uniqueScopes {
+			query := filter.BuildGmailSearchQuery(scope)
+			messages, err := client.GetRecentMessagesWithQuery(10, query)
+			if err != nil {
+				fmt.Printf("⚠️  Error fetching messages for scope '%s': %v\n", scope, err)
+				fetchErr = err
+				continue
+			}
+
+			// Deduplicate messages by ID
+			for _, msg := range messages {
+				messageMap[msg.Id] = msg
+			}
+		}
+
+		// Convert map to slice
+		allMessages = make([]*googlemail.Message, 0, len(messageMap))
+		for _, msg := range messageMap {
+			allMessages = append(allMessages, msg)
+		}
+	}
+
+	if fetchErr != nil {
+		return fetchErr
 	}
 
 	matchCount := 0
 
-	for _, msg := range messages {
+	for _, msg := range allMessages {
 		// Skip if already seen
 		if seenMessages.IsSeen(msg.Id) {
 			continue
@@ -372,7 +456,7 @@ func checkEmails(client *gmail.Client, cfg *filter.Config, seenMessages *state.S
 
 	if matchCount == 0 {
 		fmt.Printf("[%s] Checked %d messages, no new matches\n",
-			time.Now().Format("15:04:05"), len(messages))
+			time.Now().Format("15:04:05"), len(allMessages))
 	}
 
 	return nil

@@ -22,6 +22,7 @@ var (
 	filterSubject string
 	filterMatch   string
 	filterLabels  string
+	filterScope   string
 )
 
 var addCmd = &cobra.Command{
@@ -59,6 +60,7 @@ func init() {
 	addCmd.Flags().StringVarP(&filterSubject, "subject", "s", "", "Subject patterns (comma-separated)")
 	addCmd.Flags().StringVarP(&filterMatch, "match", "m", "any", "Match mode: 'any' (OR) or 'all' (AND)")
 	addCmd.Flags().StringVarP(&filterLabels, "labels", "l", "", "Labels/categories (comma-separated, e.g., work,urgent)")
+	addCmd.Flags().StringVar(&filterScope, "scope", "inbox", "Gmail scope: inbox, all, primary, social, promotions, updates, forums, primary+social, all-except-trash")
 }
 
 func runFilterAdd(cmd *cobra.Command, args []string) {
@@ -157,13 +159,37 @@ func runFilterAdd(cmd *cobra.Command, args []string) {
 	// Parse labels
 	labelsList := parseCSV(filterLabels)
 
+	// Get Gmail scope (only ask if interactive and not already set)
+	if !cmd.Flags().Changed("scope") && interactive {
+		fmt.Println("\n📬 Gmail Scope (Optional)")
+		fmt.Println("   Specify which Gmail categories to search:")
+		fmt.Println("   • inbox       - Primary inbox only (default)")
+		fmt.Println("   • all         - All mail including spam")
+		fmt.Println("   • primary     - Primary category only")
+		fmt.Println("   • social      - Social category (Facebook, Twitter, etc.)")
+		fmt.Println("   • promotions  - Promotions category")
+		fmt.Println("   • updates     - Updates category")
+		fmt.Println("   • forums      - Forums category")
+		fmt.Println("   • primary+social - Multiple categories (use + to combine)")
+		fmt.Print("\nGmail scope (default: inbox): ")
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(input)
+		if input != "" {
+			filterScope = input
+		}
+	}
+
+	// Validate and normalize scope
+	filterScope = normalizeGmailScope(filterScope)
+
 	// Create filter
 	f := filter.Filter{
-		Name:    filterName,
-		From:    fromPatterns,
-		Subject: subjectPatterns,
-		Match:   filterMatch,
-		Labels:  labelsList,
+		Name:       filterName,
+		From:       fromPatterns,
+		Subject:    subjectPatterns,
+		Match:      filterMatch,
+		Labels:     labelsList,
+		GmailScope: filterScope,
 	}
 
 	// Save filter
@@ -191,6 +217,7 @@ func runFilterAdd(cmd *cobra.Command, args []string) {
 	filterSubject = ""
 	filterMatch = "any"
 	filterLabels = ""
+	filterScope = "inbox"
 }
 
 func parseCSV(s string) []string {
@@ -228,6 +255,13 @@ func printFilter(f filter.Filter) {
 		matchDesc = "all (AND - all conditions must match)"
 	}
 	fmt.Printf("  Match:   %s\n", matchDesc)
+
+	// Show Gmail scope if not default
+	scope := f.GmailScope
+	if scope == "" {
+		scope = "inbox"
+	}
+	fmt.Printf("  Scope:   %s\n", scope)
 }
 
 // getDB initializes and returns a database connection
@@ -243,4 +277,33 @@ func getExistingLabels(db *sql.DB) ([]string, error) {
 // saveLabelsToDatabase saves labels to the database for reuse
 func saveLabelsToDatabase(db *sql.DB, labels []string) {
 	storage.SaveLabels(db, labels)
+}
+
+// normalizeGmailScope validates and normalizes the Gmail scope
+func normalizeGmailScope(scope string) string {
+	scope = strings.ToLower(strings.TrimSpace(scope))
+	if scope == "" {
+		return "inbox"
+	}
+
+	// Valid single scopes
+	validScopes := []string{
+		"inbox", "all", "primary", "social", "promotions",
+		"updates", "forums", "all-except-trash", "spam-only",
+	}
+
+	for _, valid := range validScopes {
+		if scope == valid {
+			return scope
+		}
+	}
+
+	// Check for combined scopes (e.g., "primary+social")
+	if strings.Contains(scope, "+") {
+		return scope
+	}
+
+	// If invalid, default to inbox and warn
+	fmt.Printf("⚠️  Unknown Gmail scope '%s', using 'inbox' instead\n", scope)
+	return "inbox"
 }

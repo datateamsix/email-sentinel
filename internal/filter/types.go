@@ -2,17 +2,19 @@ package filter
 
 // Filter represents an email filter rule
 type Filter struct {
-	Name    string   `yaml:"name"`
-	From    []string `yaml:"from"`
-	Subject []string `yaml:"subject"`
-	Match   string   `yaml:"match"` // "any" or "all"
-	Labels  []string `yaml:"labels,omitempty"` // Categories like "work", "personal", etc.
+	Name       string   `yaml:"name"`
+	From       []string `yaml:"from"`
+	Subject    []string `yaml:"subject"`
+	Match      string   `yaml:"match"`      // "any" or "all"
+	Labels     []string `yaml:"labels,omitempty"`     // Categories like "work", "personal", etc.
+	GmailScope string   `yaml:"gmail_scope,omitempty"` // Gmail scope: "inbox", "all", "primary", "social", "promotions", "updates", "forums", etc.
 }
 
 // MatchResult represents a matched filter with its metadata
 type MatchResult struct {
-	Name   string
-	Labels []string
+	Name       string
+	Labels     []string
+	GmailScope string
 }
 
 // Config represents the application configuration

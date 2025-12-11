@@ -2,982 +2,715 @@
 
 ![Email Sentinel Logo](images/logo.png)
 
-A cross-platform CLI tool that monitors your Gmail inbox and sends real-time notifications when emails match your custom filters. Get instant alerts on desktop and mobile without constantly checking your inboxes. Surface time-sensitive email messages like OTP/2FA passcodes (copyable) to your desktop and phone. This tool allows you to create very specific and urgent alerts, allowing you to click into the exact gmail message and respond if needed.
+**Stop checking email like an addict. Get instant alerts for what matters.**
 
 [![Latest Release](https://img.shields.io/github/v/release/datateamsix/email-sentinel)](https://github.com/datateamsix/email-sentinel/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/datateamsix/email-sentinel/total)](https://github.com/datateamsix/email-sentinel/releases)
 [![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://github.com/datateamsix/email-sentinel)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/datateamsix/email-sentinel)](https://goreportcard.com/report/github.com/datateamsix/email-sentinel)
 
-## 🎯 The Critical Email Problem: Checking Email Like An Addict Looking For A Fix
+---
 
-Waiting and checking for important emails (job opportunities, client responses, urgent messages) means constantly checking your inbox — a major productivity and focus killer. Email Sentinel solves this by smart, specific notifications:
+## The Problem
 
-- **Monitoring Gmail** in the background via the Gmail API
-- **Filtering emails** by sender address or subject line keywords
-- **Pushing notifications** to your desktop and mobile device instantly
-- **Summarizing Emails** what's important, key questions and action items
+You're waiting for an important email (job response, client message, urgent alert), so you obsessively check your inbox every 5 minutes. This destroys your focus and productivity.
 
-## ![alt text](image.png) Features
+## The Solution
 
-### Core Functionality
-- **Cross-Platform**: Single binary for Windows, macOS, and Linux
-- **Flexible Filters**: Match by sender, subject keywords, or both
-- **Filter Labels/Categories**: Organize filters with reusable labels (work, personal, urgent, etc.)
-- **AND/OR Logic**: Configure whether all conditions must match or any condition triggers
-- **Smart Priority Rules**: YAML-based rules engine for automatic priority classification
-- **AI Email Summaries**: Optional AI-powered summaries with questions/actions (Claude, OpenAI, Gemini)
-- **OTP/2FA Code Detection**: Automatically extract and manage verification codes from emails
-- **Low Resource**: Lightweight polling with configurable intervals
-- **Secure**: OAuth 2.0 authentication, credentials stored locally
-- **No Cost**: Uses Gmail API free tier (1B quota units/day)
+Email Sentinel monitors Gmail in the background and sends **instant notifications** only for emails that match your specific filters. Work in peace, knowing you won't miss what matters.
 
-### 🚨 Notifications
-- **Desktop Notifications**: Native OS notifications (Windows, macOS, Linux) with filter labels
-- **Windows Toast Notifications**: Rich, clickable notifications in Action Center with Gmail links, labels, and AI summaries
-- **Mobile Push**: Free push notifications to iPhone/Android via [ntfy.sh](https://ntfy.sh) with label tags
-- **System Tray**: Background app with tray icon showing recent alerts with AI summaries (Windows/macOS/Linux)
-- **Label Display**: All notifications show filter labels for easy categorization
-- **AI-Enhanced**: Notifications show AI summaries, questions, and action items when enabled
+---
 
-### ⚠️ Alert Management
-- **Alert History**: SQLite database stores all alerts with automatic daily cleanup
-- **View Past Alerts**: Review missed notifications with `email-sentinel alerts`
-- **Direct Gmail Links**: Click any alert to open the email directly in Gmail
-- **Priority Indicators**: Visual distinction between normal and urgent emails (🔥 vs 📧)
-- **OTP Code Management**: View, copy, and manage 2FA codes with `email-sentinel otp` commands
+## ✨ What It Does
 
-## 📋 Table of Contents
+- 📬 **Monitors Gmail** via API (no IMAP polling)
+- 🎯 **Smart Filtering** by sender, subject, or both
+- 🔔 **Desktop + Mobile Notifications** (Windows/macOS/Linux + ntfy.sh)
+- 🤖 **AI Email Summaries** (optional, with Claude/GPT/Gemini)
+- 🔐 **OTP/2FA Code Extraction** (copy codes instantly)
+- 📊 **Alert History** with Gmail links
+- 🪟 **System Tray App** (runs in background)
+- 📱 **Gmail Category Scopes** (inbox, social, promotions, etc.)
+- 🏷️ **Filter Labels** (organize by work, urgent, personal)
+- ⚡ **Priority Rules** (auto-detect urgent emails)
 
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Configuration](#configuration)
-- [Commands](#commands)
-- [Filter Examples](#filter-examples)
-- [Filter Labels](#filter-labels)
-- [Priority Rules](#priority-rules)
-- [AI Email Summaries](#ai-email-summaries)
-- [OTP/2FA Code Detection](#otp2fa-code-detection)
-- [Alert History](#alert-history)
-- [System Tray](#system-tray)
-- [Mobile Notifications](#mobile-notifications)
-- [Architecture](#architecture)
-- [Development](#development)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
+---
 
-## 🔧 Prerequisites
+## 🚀 Quick Start
 
-### Required
+### 1. Install
 
-1. **Go 1.22+** - [Download](https://go.dev/dl/)
-2. **Google Cloud Platform Account** - [Console](https://console.cloud.google.com/)
-3. **Gmail Account** - The account you want to monitor
-
-### Google Cloud Setup
-
-1. Create a new project in [Google Cloud Console](https://console.cloud.google.com/)
-2. Enable the **Gmail API**:
-   - Navigate to: APIs & Services → Library
-   - Search for "Gmail API" → Enable
-3. Configure **OAuth Consent Screen**:
-   - Navigate to: APIs & Services → OAuth consent screen
-   - User type: External
-   - App name: `email-sentinel`
-   - Scopes: Add `https://www.googleapis.com/auth/gmail.readonly`
-   - Test users: Add your Gmail address
-4. Create **OAuth Credentials**:
-   - Navigate to: APIs & Services → Credentials
-   - Create Credentials → OAuth Client ID
-   - Application type: Desktop app
-   - Download JSON → Save as `credentials.json`
-
-## 📦 Installation
-
-### Package Managers (Recommended)
-
-#### macOS / Linux (Homebrew)
-
-```bash
-brew tap datateamsix/tap
-brew install email-sentinel
-```
-
-#### Windows (Scoop)
-
+**Windows (Scoop):**
 ```powershell
 scoop bucket add datateamsix https://github.com/datateamsix/scoop-bucket
 scoop install email-sentinel
 ```
 
-#### Linux (Debian/Ubuntu)
-
+**macOS (Homebrew):**
 ```bash
-# Download latest .deb package
-wget https://github.com/datateamsix/email-sentinel/releases/latest/download/email-sentinel_*_amd64.deb
-
-# Install
-sudo dpkg -i email-sentinel_*_amd64.deb
+brew tap datateamsix/tap
+brew install email-sentinel
 ```
 
-#### Linux (RHEL/Fedora/CentOS)
-
+**Linux / From Source:**
 ```bash
-# Download latest .rpm package
-wget https://github.com/datateamsix/email-sentinel/releases/latest/download/email-sentinel_*_x86_64.rpm
-
-# Install
-sudo rpm -i email-sentinel_*_x86_64.rpm
-```
-
-### Direct Download
-
-Download pre-built binaries from the [releases page](https://github.com/datateamsix/email-sentinel/releases/latest):
-
-- **Windows**: `email-sentinel_windows_amd64.zip`
-- **macOS (Universal)**: `email-sentinel_darwin_universal.tar.gz`
-- **macOS (Intel)**: `email-sentinel_darwin_amd64.tar.gz`
-- **macOS (Apple Silicon)**: `email-sentinel_darwin_arm64.tar.gz`
-- **Linux (amd64)**: `email-sentinel_linux_amd64.tar.gz`
-- **Linux (arm64)**: `email-sentinel_linux_arm64.tar.gz`
-
-Extract the archive and move the binary to your PATH:
-
-```bash
-# macOS/Linux
-tar -xzf email-sentinel_*.tar.gz
+# Download from releases
+wget https://github.com/datateamsix/email-sentinel/releases/latest/download/email-sentinel_linux_amd64.tar.gz
+tar -xzf email-sentinel_linux_amd64.tar.gz
 sudo mv email-sentinel /usr/local/bin/
 
-# Verify installation
-email-sentinel --version
-```
-
-### Docker
-
-```bash
-# Pull image
-docker pull datateamsix/email-sentinel:latest
-
-# Run with mounted config
-docker run -v ~/.email-sentinel:/root/.email-sentinel \
-  datateamsix/email-sentinel:latest start --daemon
-```
-
-### From Source
-
-```bash
-# Clone the repository
+# Or build from source
 git clone https://github.com/datateamsix/email-sentinel.git
 cd email-sentinel
-
-# Build for your platform
 go build -o email-sentinel .
-
-# Install locally
-sudo mv email-sentinel /usr/local/bin/
 ```
 
-## 🚀 Quick Start
+### 2. Set Up Gmail API
+
+You need Gmail API credentials (one-time setup, ~5 minutes):
+
+**📖 Follow:** [Gmail API Setup Guide](docs/GMAIL_API_SETUP.md)
+
+Short version:
+1. Create project at [Google Cloud Console](https://console.cloud.google.com/)
+2. Enable Gmail API
+3. Create OAuth Desktop credentials
+4. Download `credentials.json`
+
+### 3. Initialize
 
 ```bash
-# 1. Place credentials.json in project root or config directory
-
-# 2. Initialize and authenticate
-./email-sentinel init
-
-# 3. Add a filter with labels
-./email-sentinel filter add --name "Job Alerts" --from "linkedin.com,greenhouse.io" --labels "work,career"
-
-# 4. Test notifications
-./email-sentinel test desktop
-./email-sentinel test toast          # Windows only - test Action Center
-
-# 5. (Optional) Enable AI summaries - see AI Email Summaries section
-# Get free Gemini API key: https://makersuite.google.com/app/apikey
-# Set: GEMINI_API_KEY environment variable
-# Edit: ai-config.yaml and set enabled: true
-
-# 6. Start monitoring with system tray
-./email-sentinel start --tray        # Recommended for background use
-./email-sentinel start --tray --ai-summary  # With AI summaries
-
-# 7. View alert history
-./email-sentinel alerts
-
-# 8. Install auto-startup (optional)
-./email-sentinel install
-```
-
-**Platform-Specific Quickstart Guides:**
-- **[Windows Quickstart](docs/QUICKSTART_WINDOWS.md)** - Installation, notifications, auto-start, and troubleshooting for Windows 10/11
-- **[macOS Quickstart](docs/QUICKSTART_MACOS.md)** - Installation, menu bar setup, LaunchAgent, and troubleshooting for macOS
-- **[Linux Quickstart](docs/QUICKSTART_LINUX.md)** - Installation, systemd setup, desktop environment configuration for Linux
-
-**For detailed setup instructions**, see **[Complete Setup Guide](docs/build_to_first_alert.md)** - comprehensive guide for Windows, macOS, and Linux.
-
-**Want to monitor multiple email accounts?** See **[Central Email Setup](docs/central_email_setup.md)** - forward emails from all accounts to one central Gmail.
-
-**Having issues on Windows?** See **[WINDOWS_INSTALL_TROUBLESHOOTING.md](WINDOWS_INSTALL_TROUBLESHOOTING.md)**
-
-## 🖥️ Interactive Mode
-
-Email Sentinel features a beautiful interactive CLI menu system for easier management.
-
-### Launching Interactive Mode
-
-Run Email Sentinel without any arguments to launch the interactive menu:
-
-```bash
-email-sentinel
-```
-
-### First-Time Setup Wizard
-
-On first run, the setup wizard automatically guides you through complete configuration:
-
-1. **Prerequisites Check** - Verifies Go runtime, config directory, and credentials.json
-2. **Gmail Authentication** - OAuth 2.0 flow with browser authorization
-3. **Create First Filter** - Interactive filter creation with examples and validation
-4. **Notification Setup** - Configure desktop and/or mobile push notifications
-5. **OTP/2FA Setup** - Configure automatic extraction of verification codes from emails
-6. **Test & Verify** - Send test notifications and verify Gmail connection
-7. **Complete** - Summary and quick command reference
-
-The wizard can be re-run anytime from the main menu (Option 6).
-
-### Main Menu
-
-The interactive menu provides intuitive access to all features:
-
-```
-╔═══════════════════════════════════════════════════════════╗
-║                        MAIN MENU                          ║
-╠═══════════════════════════════════════════════════════════╣
-║                                                           ║
-║  [1] 🚀 Start Monitoring      Start watching for emails   ║
-║  [2] 📋 Manage Filters        Add, edit, remove filters   ║
-║  [3] 🔔 Notifications         Configure alerts            ║
-║  [4] 📊 Status & History      View alerts and status      ║
-║  [5] ⚙️  Settings             Configure app settings      ║
-║  [6] 🔧 Setup Wizard          Re-run initial setup        ║
-║                                                           ║
-║  [q] Exit                                                 ║
-║                                                           ║
-╚═══════════════════════════════════════════════════════════╝
-```
-
-### Status Dashboard
-
-Access the real-time status dashboard from Status & History → Dashboard:
-
-- **Service Status**: Watcher state, uptime, last check
-- **Gmail Connection**: Account, auth status, token expiry
-- **Filters**: List of active filters with summaries
-- **Notifications**: Desktop and mobile configuration
-- **Statistics**: 24-hour email and alert metrics
-
-### Keyboard Shortcuts
-
-| Key      | Action                          |
-|----------|---------------------------------|
-| `1-9`    | Select menu item by number      |
-| `Enter`  | Confirm selection               |
-| `b`      | Back to previous menu           |
-| `q`      | Quit application                |
-| `r`      | Refresh (in dashboard)          |
-| `?`      | Show keyboard shortcuts help    |
-| `Ctrl+C` | Force quit                      |
-
-### Why Use Interactive Mode?
-
-- **Beginner-Friendly**: Guided setup wizard with validation
-- **Visual**: Beautiful ASCII art menus and status displays
-- **Discoverable**: All features accessible without memorizing commands
-- **Safe**: Confirmation prompts for destructive operations
-- **Informative**: Real-time status dashboard and alert history
-
-### Command Line vs Interactive Mode
-
-Both modes are fully supported:
-
-| Mode          | Best For                                    |
-|---------------|---------------------------------------------|
-| Interactive   | Setup, exploration, visual status           |
-| Command Line  | Automation, scripting, quick operations     |
-
-All features are available in both modes - choose what works best for your workflow!
-
-## ⚙️ Configuration
-
-### Config File Location
-
-| OS      | Path                                                    |
-|---------|---------------------------------------------------------|
-| Windows | `%APPDATA%\email-sentinel\config.yaml`                  |
-| macOS   | `~/Library/Application Support/email-sentinel/config.yaml` |
-| Linux   | `~/.config/email-sentinel/config.yaml`                  |
-
-### Config Structure
-
-```yaml
-polling_interval: 45  # Seconds between Gmail checks
-
-filters:
-  - name: "Job Opportunities"
-    from:
-      - "@linkedin.com"
-      - "greenhouse.io"
-      - "lever.co"
-    subject:
-      - "interview"
-      - "application"
-      - "opportunity"
-    match: any  # "any" (OR) or "all" (AND)
-    labels:
-      - work
-      - career
-
-  - name: "Client Emails"
-    from:
-      - "client@company.com"
-    subject: []
-    match: any
-    labels:
-      - work
-      - urgent
-
-notifications:
-  desktop: true
-  mobile:
-    enabled: true
-    ntfy_topic: "your-secret-topic-name"
-```
-
-### Filter Match Modes
-
-| Mode  | Behavior                                          | Use Case                              |
-|-------|---------------------------------------------------|---------------------------------------|
-| `any` | Triggers if sender OR subject matches             | Broader matching, more notifications  |
-| `all` | Triggers only if sender AND subject both match    | Precise matching, fewer notifications |
-
-## 📖 Commands
-
-### `init`
-
-Initialize email-sentinel with Gmail OAuth authentication.
-
-```bash
+# Place credentials.json in config directory or current folder
 email-sentinel init
+# Opens browser for OAuth → Grant permissions → Done!
 ```
 
-- Locates `credentials.json`
-- Opens browser for Google OAuth
-- Saves authentication token
-- Displays existing filters and next steps
-
-### `filter add`
-
-Add a new email filter with optional labels/categories.
+### 4. Add Filter
 
 ```bash
-# Interactive mode (shows existing labels for reuse)
-email-sentinel filter add
-
-# With flags
+# Example: Get notified for job opportunities
 email-sentinel filter add \
   --name "Job Alerts" \
-  --from "linkedin.com,greenhouse.io" \
-  --subject "interview,opportunity" \
-  --match any \
+  --from "linkedin.com,greenhouse.io,lever.co" \
+  --subject "interview,opportunity,position" \
+  --scope inbox \
   --labels "work,career"
 ```
 
-| Flag        | Short | Description                                      |
-|-------------|-------|--------------------------------------------------|
-| `--name`    | `-n`  | Filter name (required)                           |
-| `--from`    | `-f`  | Sender patterns, comma-separated                 |
-| `--subject` | `-s`  | Subject patterns, comma-separated                |
-| `--match`   | `-m`  | Match mode: `any` or `all` (default: `any`)      |
-| `--labels`  | `-l`  | Labels/categories, comma-separated (e.g., work,urgent) |
-
-**Labels Feature:**
-- Labels are stored in the database and suggested when creating new filters
-- Labels appear in all notifications (desktop, mobile, toast)
-- Organize filters by category: work, personal, urgent, etc.
-- Reuse existing labels or create new ones on-the-fly
-
-### `filter list`
-
-Display all configured filters.
+### 5. Start Monitoring
 
 ```bash
-email-sentinel filter list
-```
-
-### `filter edit`
-
-Edit an existing filter.
-
-```bash
-# Interactive selection
-email-sentinel filter edit
-
-# By name
-email-sentinel filter edit "Job Alerts"
-```
-
-### `filter remove`
-
-Remove a filter.
-
-```bash
-# Interactive selection
-email-sentinel filter remove
-
-# By name
-email-sentinel filter remove "Job Alerts"
-```
-
-### `start`
-
-Start monitoring Gmail for matching emails.
-
-```bash
-# Foreground (logs to stdout)
-email-sentinel start
-
-# With system tray icon (recommended)
+# Run with system tray (recommended)
 email-sentinel start --tray
 
-# With AI summaries enabled
-email-sentinel start --tray --ai-summary
-
-# As daemon (background)
-email-sentinel start --daemon
-
-# With auto-cleanup of old alerts (every 60 minutes by default)
-email-sentinel start --tray --cleanup-interval 60
+# Or run in foreground
+email-sentinel start
 ```
 
-**Flags:**
-- `--tray` / `-t` - Run with system tray icon
-- `--daemon` / `-d` - Run as background daemon
-- `--ai-summary` - Enable AI-powered email summaries
-- `--cleanup-interval` - Auto-cleanup interval in minutes (0=disabled, default=60)
+**That's it!** Send yourself a test email and watch the notification appear. ✨
 
-### `stop`
+---
 
-Stop the background daemon.
+## 📚 Documentation
+
+### Getting Started Guides
+
+Choose your platform for step-by-step setup:
+
+- **[Windows Quickstart](docs/QUICKSTART_WINDOWS.md)** - Complete Windows 10/11 guide with Task Scheduler auto-start
+- **[macOS Quickstart](docs/QUICKSTART_MACOS.md)** - Menu bar app setup with LaunchAgent auto-start
+- **[Linux Quickstart](docs/QUICKSTART_LINUX.md)** - Desktop environment setup with systemd auto-start
+- **[Complete Setup Guide](docs/BUILD_TO_FIRST_ALERT.md)** - Universal guide from build to first alert
+
+### Feature Guides
+
+- **[CLI Command Reference](docs/CLI_GUIDE.md)** - All commands explained
+- **[Central Email Setup](docs/CENTRAL_EMAIL_SETUP.md)** - Monitor multiple accounts via forwarding
+- **[Mobile Notifications (ntfy)](docs/mobile_ntfy_setup.md)** - Free push notifications to phone
+- **[AI Architecture](docs/AI_ARCHITECTURE.md)** - How AI summaries work
+- **[System Tray Architecture](docs/TRAY_SYSTEM_ARCHITECTURE.md)** - Background app design
+
+---
+
+## 🎯 Top 5 Use Cases
+
+### 1. 🎯 Job Hunting & Recruiter Alerts
+
+**The Problem:** Miss interview invites or recruiter messages buried in your inbox.
+
+**The Solution:** Get instant alerts when recruiters reach out or job applications progress.
 
 ```bash
+email-sentinel filter add \
+  --name "Job Opportunities" \
+  --from "linkedin.com,greenhouse.io,lever.co,indeed.com,glassdoor.com" \
+  --subject "interview,opportunity,position,application,recruiter" \
+  --scope inbox \
+  --labels "career,urgent"
+
+# Also check promotions where some recruiting emails land
+email-sentinel filter add \
+  --name "Job Promotions" \
+  --from "linkedin.com,indeed.com,ziprecruiter.com" \
+  --scope promotions \
+  --labels "career"
+```
+
+**What you'll catch:**
+- Interview invitations
+- Application status updates
+- Direct recruiter messages
+- Job match notifications
+- Networking opportunities
+
+---
+
+### 2. 🔐 OTP & 2FA Verification Codes
+
+**The Problem:** Constantly switching between email and apps to copy verification codes.
+
+**The Solution:** Auto-extract OTP codes, copy to clipboard, view in tray.
+
+```bash
+# OTP detection works automatically with any filter
+# Emails from common OTP senders are auto-detected
+email-sentinel filter add \
+  --name "Verification Codes" \
+  --from "noreply@github.com,accounts.google.com,amazon.com,paypal.com" \
+  --subject "verification,code,otp,2fa,authenticate" \
+  --scope "inbox+updates" \
+  --labels "otp,security"
+
+# View all OTP codes
+email-sentinel otp list --active
+
+# Copy latest code to clipboard
+email-sentinel otp get
+```
+
+**What you'll catch:**
+- GitHub verification codes
+- Google account codes
+- Banking 2FA codes
+- Amazon, PayPal, Microsoft codes
+- Any 6-digit verification codes
+
+---
+
+### 3. 👔 Boss & VIP Contact Alerts
+
+**The Problem:** Miss urgent emails from your boss, clients, or important contacts.
+
+**The Solution:** Never miss messages from people who matter most.
+
+```bash
+# Your boss
+email-sentinel filter add \
+  --name "Boss" \
+  --from "boss@company.com" \
+  --scope inbox \
+  --labels "work,vip,urgent"
+
+# Key clients (add to app-config.yaml for priority 🔥)
+email-sentinel filter add \
+  --name "Top Clients" \
+  --from "client1@company.com,client2@agency.com,ceo@bigclient.com" \
+  --scope inbox \
+  --labels "work,vip,billing"
+
+# Important domains (entire company)
+email-sentinel filter add \
+  --name "Strategic Partner" \
+  --from "@importantpartner.com" \
+  --scope inbox \
+  --labels "work,vip"
+```
+
+**Pro tip:** Add VIP senders to `app-config.yaml` for automatic urgent (🔥) priority:
+```yaml
+priority:
+  vip_senders:
+    - boss@company.com
+    - ceo@bigclient.com
+  vip_domains:
+    - importantpartner.com
+```
+
+---
+
+### 4. 🚨 Spam Rescue & Important Email Recovery
+
+**The Problem:** Important emails sometimes land in spam/promotions and you miss them.
+
+**The Solution:** Monitor spam and promotions for specific important senders.
+
+```bash
+# Check spam for specific contacts
+email-sentinel filter add \
+  --name "Spam Check - Important Senders" \
+  --from "important@freelancer.com,contractor@startup.com" \
+  --scope "all-except-trash" \
+  --labels "spam-rescue,important"
+
+# Monitor promotions for bills/receipts
+email-sentinel filter add \
+  --name "Bills in Promotions" \
+  --from "billing@utilities.com,noreply@bank.com" \
+  --subject "bill,invoice,statement,payment" \
+  --scope "promotions+updates" \
+  --labels "billing,important"
+
+# Catch forwarded emails that might be misfiled
+email-sentinel filter add \
+  --name "Forwarded Important" \
+  --subject "fwd:,forwarded" \
+  --from "assistant@company.com" \
+  --scope "all-except-trash" \
+  --labels "forwarded"
+```
+
+**What you'll catch:**
+- Important emails misfiled by Gmail
+- Bills/invoices in promotions
+- Forwarded messages
+- Contractor/freelancer emails
+- Small business communications
+
+---
+
+### 5. ⚡ Urgent Keywords & Time-Sensitive Alerts
+
+**The Problem:** Miss emails marked "urgent", "asap", or with deadlines.
+
+**The Solution:** Auto-detect urgency keywords across all senders.
+
+```bash
+# Urgent keywords in any email
+email-sentinel filter add \
+  --name "Urgent Keywords" \
+  --subject "urgent,asap,emergency,critical,deadline,action required,time sensitive" \
+  --scope "inbox+primary" \
+  --labels "urgent"
+
+# Work-related urgent items
+email-sentinel filter add \
+  --name "Work Deadlines" \
+  --from "@company.com,@client.com" \
+  --subject "deadline,due,eod,asap,urgent" \
+  --scope inbox \
+  --labels "work,urgent,deadline"
+
+# Payment & billing urgency
+email-sentinel filter add \
+  --name "Payment Deadlines" \
+  --subject "overdue,payment due,final notice,reminder" \
+  --scope "inbox+updates+promotions" \
+  --labels "billing,urgent"
+```
+
+**Pro tip:** Add urgent keywords to `app-config.yaml` for automatic priority:
+```yaml
+priority:
+  urgent_keywords:
+    - urgent
+    - asap
+    - deadline
+    - action required
+    - emergency
+    - time sensitive
+    - final notice
+```
+
+**What you'll catch:**
+- Deadline reminders
+- Emergency notifications
+- Payment due notices
+- Time-sensitive requests
+- Critical updates
+
+---
+
+## 🔥 Advanced Features
+
+### Gmail Category Scopes
+
+Target specific Gmail categories when creating filters:
+
+```bash
+# Monitor only primary inbox
+email-sentinel filter add --name "Important" --from "ceo@company.com" --scope primary
+
+# Monitor social category
+email-sentinel filter add --name "Social" --from "facebook.com" --scope social
+
+# Monitor multiple categories
+email-sentinel filter add --name "Updates" --subject "receipt,confirmation" --scope "primary+updates"
+```
+
+**Available scopes:**
+- `inbox` - Primary inbox (default)
+- `primary` - Primary category
+- `social` - Social category
+- `promotions` - Promotions category
+- `updates` - Updates category (receipts, confirmations)
+- `forums` - Forums category (mailing lists)
+- `all` - All mail including spam
+- `all-except-trash` - Everything except trash
+- `primary+social` - Combine multiple with `+`
+
+**Override all filters globally:**
+```bash
+# Search only social category for all filters
+email-sentinel start --tray --search social
+```
+
+### AI Email Summaries
+
+Get instant AI-powered summaries of emails (FREE with Gemini):
+
+```bash
+# 1. Get free API key
+# Visit: https://makersuite.google.com/app/apikey
+
+# 2. Set environment variable
+export GEMINI_API_KEY="your-api-key"  # macOS/Linux
+setx GEMINI_API_KEY "your-api-key"    # Windows
+
+# 3. Enable in config
+# Edit: app-config.yaml, set ai_summary.enabled: true
+
+# 4. Start with AI
+email-sentinel start --tray --ai-summary
+```
+
+Summaries include:
+- 📝 Concise overview
+- ❓ Questions asked
+- ✅ Action items
+
+Supports: **Gemini** (free), **Claude**, **OpenAI GPT**
+
+### OTP/2FA Code Detection
+
+Automatically extract verification codes from emails:
+
+```bash
+# View recent codes
+email-sentinel otp list
+
+# Get latest code (copies to clipboard)
+email-sentinel otp get
+
+# Test detection
+email-sentinel otp test "Your verification code is 849372"
+```
+
+Supports 15+ services including Gmail, GitHub, Amazon, PayPal, banking, and more.
+
+### Priority Rules
+
+Auto-detect urgent emails with `app-config.yaml`:
+
+```yaml
+priority:
+  urgent_keywords:
+    - urgent
+    - asap
+    - action required
+    - deadline
+    - critical
+
+  vip_senders:
+    - boss@company.com
+    - ceo@company.com
+
+  vip_domains:
+    - importantclient.com
+```
+
+Urgent emails show 🔥 icon in notifications.
+
+### Filter Labels
+
+Organize filters by category:
+
+```bash
+# Labels appear in all notifications
+email-sentinel filter add \
+  --name "Client Emails" \
+  --from "client@company.com" \
+  --labels "work,urgent,billing"
+
+# List shows: 🏷️ work, urgent, billing
+```
+
+Labels help you:
+- Categorize alerts at a glance
+- Filter notifications by type
+- Organize your workflow
+
+### Alert History
+
+View past alerts with clickable Gmail links:
+
+```bash
+# View today's alerts
+email-sentinel alerts
+
+# View last 10 alerts
+email-sentinel alerts --recent 10
+
+# Clear all alerts
+email-sentinel alerts clear
+```
+
+### System Tray Features
+
+Run with `--tray` for background operation:
+
+```bash
+email-sentinel start --tray
+```
+
+**Features:**
+- 📧 Icon shows alert status (mailbox with flag)
+- 📋 Recent Alerts submenu (click to open in Gmail)
+- 🔥 Red icon flash for urgent alerts
+- ⚙️ Manage filters from tray menu
+- 📊 View alert history
+- 🗑️ Clear alerts
+
+### Multi-Account Monitoring
+
+Monitor multiple email accounts by forwarding to one central Gmail:
+
+**📖 See:** [Central Email Setup Guide](docs/CENTRAL_EMAIL_SETUP.md)
+
+```
+┌──────────────┐
+│  Work Gmail  │──┐
+└──────────────┘  │
+┌──────────────┐  │  ┌──────────────────┐       ┌──────────────────┐
+│   Outlook    │──┼─▶│  Central Gmail   │──────▶│ Email Sentinel   │
+└──────────────┘  │  └──────────────────┘       └──────────────────┘
+┌──────────────┐  │
+│ Personal GMail│──┘
+└──────────────┘
+```
+
+Benefits:
+- Single OAuth authentication
+- Monitor unlimited accounts
+- Retain original sender info
+- Multi-stage filtering (email client → Gmail → Email Sentinel)
+
+---
+
+## 📖 Command Reference
+
+### Filters
+
+```bash
+# Add filter
+email-sentinel filter add [--name] [--from] [--subject] [--scope] [--labels] [--match]
+
+# List filters
+email-sentinel filter list
+
+# Edit filter
+email-sentinel filter edit [name]
+
+# Remove filter
+email-sentinel filter remove [name]
+```
+
+### Monitoring
+
+```bash
+# Start (foreground)
+email-sentinel start
+
+# Start with system tray
+email-sentinel start --tray
+
+# Start with AI summaries
+email-sentinel start --tray --ai-summary
+
+# Start with global scope override
+email-sentinel start --search social
+
+# Start as daemon
+email-sentinel start --daemon
+
+# Check status
+email-sentinel status
+
+# Stop daemon
 email-sentinel stop
 ```
 
-### `status`
-
-Check if email-sentinel is running.
+### Alerts & OTP
 
 ```bash
-email-sentinel status
+# View alerts
+email-sentinel alerts [--recent N]
+
+# Clear alerts
+email-sentinel alerts clear
+
+# List OTP codes
+email-sentinel otp list [--active]
+
+# Get latest OTP
+email-sentinel otp get
+
+# Clear expired OTPs
+email-sentinel otp clear
+
+# Test OTP extraction
+email-sentinel otp test "text"
 ```
 
-### `alerts`
-
-View email alert history.
+### Configuration
 
 ```bash
-# View all alerts from today
-email-sentinel alerts
+# Show config
+email-sentinel config show
 
-# View last N alerts
-email-sentinel alerts --recent 5
+# Set polling interval
+email-sentinel config set polling 30
+
+# View config file location
+# Windows: %APPDATA%\email-sentinel\
+# macOS: ~/Library/Application Support/email-sentinel/
+# Linux: ~/.config/email-sentinel/
 ```
 
-Shows:
-- Priority indicators (🔥 for urgent, 📧 for normal)
-- Timestamp, sender, subject
-- Gmail permalink for each alert
-
-### `test`
-
-Test notification systems.
+### Testing
 
 ```bash
 # Test desktop notification
 email-sentinel test desktop
 
-# Test Windows toast notification
+# Test Windows toast
 email-sentinel test toast
-email-sentinel test toast --priority    # Test urgent notification
 
-# Test mobile notification
+# Test toast with priority
+email-sentinel test toast --priority
+
+# Test mobile (ntfy)
 email-sentinel test mobile
 
 # Test filter matching
 email-sentinel test filter "Filter Name" "sender@example.com" "subject text"
 ```
 
-### `config`
-
-View or modify configuration.
+### Auto-Start
 
 ```bash
-# Show current config
-email-sentinel config show
-
-# Set polling interval
-email-sentinel config set polling 30
-```
-
-### `install`
-
-Install email-sentinel to run automatically on startup.
-
-```bash
-# Install auto-startup
+# Install auto-start
 email-sentinel install
 
-# Preview what would be installed
+# Preview install
 email-sentinel install --show
-```
 
-**Platform support:**
-- **Windows**: Creates Task Scheduler task (runs at logon)
-- **macOS**: Creates LaunchAgent plist
-- **Linux**: Creates systemd user service
-
-### `uninstall`
-
-Remove email-sentinel from automatic startup.
-
-```bash
+# Uninstall auto-start
 email-sentinel uninstall
 ```
 
-## 📝 Filter Examples
+---
 
-### Job Search
+## ⚙️ Configuration Files
 
-```bash
-email-sentinel filter add \
-  --name "Job Applications" \
-  --from "linkedin.com,greenhouse.io,lever.co,indeed.com" \
-  --subject "interview,application,opportunity,position" \
-  --match any \
-  --labels "work,career"
-```
+All config files are in the platform-specific config directory:
 
-### Specific Sender
+| Platform | Location |
+|----------|----------|
+| **Windows** | `%APPDATA%\email-sentinel\` |
+| **macOS** | `~/Library/Application Support/email-sentinel/` |
+| **Linux** | `~/.config/email-sentinel/` |
 
-```bash
-email-sentinel filter add \
-  --name "From Boss" \
-  --from "boss@company.com" \
-  --labels "work,urgent"
-```
+### Main Configuration (`app-config.yaml`)
 
-### Subject Keywords Only
-
-```bash
-email-sentinel filter add \
-  --name "Urgent Emails" \
-  --subject "urgent,asap,emergency,critical" \
-  --labels "urgent"
-```
-
-### Precise Match (AND)
-
-```bash
-email-sentinel filter add \
-  --name "Client Invoices" \
-  --from "billing@client.com" \
-  --subject "invoice,payment" \
-  --match all \
-  --labels "work,billing"
-```
-
-### Personal Emails
-
-```bash
-email-sentinel filter add \
-  --name "Family Updates" \
-  --from "mom@example.com,dad@example.com" \
-  --labels "personal,family"
-```
-
-## 🏷️ Filter Labels
-
-Email Sentinel allows you to organize filters with reusable labels/categories.
-
-### How It Works
-
-**First Time:**
-```bash
-email-sentinel filter add --name "Boss" --from "boss@company.com" --labels "work,urgent"
-```
-Labels "work" and "urgent" are saved to the database.
-
-**Next Time:**
-```bash
-email-sentinel filter add
-# Interactive mode shows: "Existing labels: work, urgent"
-# You can reuse or add new ones
-```
-
-### Label Features
-
-- **Persistent Storage**: Labels saved in SQLite database (`history.db`)
-- **Auto-Suggest**: Interactive mode shows existing labels
-- **Smart Sorting**: Most recently used labels appear first
-- **Flexible**: Create new labels anytime or reuse existing ones
-
-### Label Display in Notifications
-
-All notification types display filter labels:
-
-**Desktop Notification:**
-```
-📧 Email Match: Boss
-🏷️ work 🏷️ urgent
-From: boss@company.com
-Subject: Quarterly Review
-```
-
-**Mobile Push (ntfy.sh):**
-```
-Title: 📧 Boss
-🏷️ work 🏷️ urgent
-From: boss@company.com
-Subject: Quarterly Review
-Tags: email,alert,work,urgent
-```
-
-**Windows Toast:**
-```
-Subject: Quarterly Review
-🏷️ work 🏷️ urgent
-From: boss@company.com
-[Email snippet preview...]
-```
-
-**Console Output:**
-```
-📧 MATCH [Boss] 🏷️ work, urgent From: boss@company.com | Subject: Quarterly Review
-```
-
-### Common Label Examples
-
-| Label      | Use Case                                |
-|------------|-----------------------------------------|
-| work       | Work-related emails                     |
-| personal   | Personal correspondence                 |
-| urgent     | Time-sensitive emails                   |
-| billing    | Invoices and payments                   |
-| career     | Job opportunities, interviews           |
-| family     | Family communications                   |
-| finance    | Banking, investments                    |
-| social     | Social media notifications              |
-
-## 🎯 Priority Rules
-
-Email Sentinel includes a smart rules engine that automatically classifies emails as normal or high priority.
-
-### Configuration
-
-Priority rules are stored in `rules.yaml` (auto-created on first run):
-
-**Location:**
-- Windows: `%APPDATA%\email-sentinel\rules.yaml`
-- macOS: `~/Library/Application Support/email-sentinel/rules.yaml`
-- Linux: `~/.config/email-sentinel/rules.yaml`
-
-### Example Rules
+Unified configuration for all features:
 
 ```yaml
-priority_rules:
-  # Keywords that mark emails as urgent
+# Polling interval (seconds)
+polling_interval: 45
+
+# Filter configuration
+filters:
+  enabled: true
+
+# Notifications
+notifications:
+  desktop:
+    enabled: true
+  mobile:
+    enabled: false
+    ntfy_topic: ""
+  quiet_hours:
+    enabled: false
+    start: "22:00"
+    end: "08:00"
+  weekend_mode: false
+
+# Priority rules
+priority:
   urgent_keywords:
     - urgent
     - asap
-    - action required
-    - deadline
-    - invoice
-    - payment
     - critical
-
-  # Specific email addresses that are always high priority
   vip_senders:
     - boss@company.com
-    - ceo@company.com
-
-  # Entire domains that are always high priority
   vip_domains:
     - importantclient.com
-    - criticalvendor.com
 
-notification_settings:
-  # Future: Quiet hours, weekend mode
-  quiet_hours_start: "22:00"
-  quiet_hours_end: "08:00"
-```
-
-### How It Works
-
-When an email matches a filter, the priority engine evaluates:
-
-1. **Urgent Keywords** - Subject/snippet contains keywords → Priority 1
-2. **VIP Senders** - Exact email match → Priority 1
-3. **VIP Domains** - Sender's domain matches → Priority 1
-4. Otherwise → Priority 0 (normal)
-
-**Priority Indicators:**
-- 🔥 High priority (1) - Red icon, urgent notification sound
-- 📧 Normal priority (0) - Standard icon and sound
-
-## 🤖 AI Email Summaries
-
-Email Sentinel can generate AI-powered summaries of your emails, helping you quickly understand what's important without reading the full message.
-
-### Features
-
-- **Smart Summaries**: Concise overview (max 500 chars) of email content
-- **Question Extraction**: Automatically identifies questions asked in the email
-- **Action Items**: Detects and lists requested actions
-- **Multi-Provider**: Supports Claude (Anthropic), OpenAI, and Google Gemini
-- **Free Tier Available**: Uses Gemini Flash by default (generous free tier)
-- **Smart Caching**: Avoids re-generating summaries for the same email
-- **Rate Limiting**: Built-in cost controls with configurable hourly/daily limits
-- **Non-Blocking**: Summaries generate asynchronously without slowing email monitoring
-
-### Quick Start (FREE with Gemini)
-
-```bash
-# 1. Get free Gemini API key
-# Visit: https://makersuite.google.com/app/apikey
-
-# 2. Set environment variable
-# Windows:
-setx GEMINI_API_KEY "your-api-key-here"
-
-# macOS/Linux:
-export GEMINI_API_KEY="your-api-key-here"
-
-# 3. Enable AI summaries in config
-# Edit: ai-config.yaml
-# Set: enabled: true
-
-# 4. Start with AI summaries
-email-sentinel start --tray --ai-summary
-```
-
-### Configuration
-
-AI summaries are configured via `ai-config.yaml` in your config directory:
-
-**Location:**
-- Windows: `%APPDATA%\email-sentinel\ai-config.yaml`
-- macOS: `~/Library/Application Support/email-sentinel/ai-config.yaml`
-- Linux: `~/.config/email-sentinel/ai-config.yaml`
-
-**Example Configuration:**
-
-```yaml
+# AI summaries (optional)
 ai_summary:
-  enabled: true
-  provider: "gemini"  # Options: claude, openai, gemini (default)
-
-  api:
+  enabled: false
+  provider: gemini  # gemini, claude, openai
+  providers:
     gemini:
-      api_key: ""  # Or set via GEMINI_API_KEY env var
-      model: "gemini-1.5-flash"
+      model: gemini-1.5-flash
       max_tokens: 1024
       temperature: 0.3
-
-    claude:
-      api_key: ""  # Or set via ANTHROPIC_API_KEY env var
-      model: "claude-3-5-haiku-20241022"
-
-    openai:
-      api_key: ""  # Or set via OPENAI_API_KEY env var
-      model: "gpt-4o-mini"
-
-  behavior:
-    max_summary_length: 500
-    priority_only: false  # Only summarize high-priority emails
-    enable_cache: true
-    timeout_seconds: 15
-    retry_attempts: 2
-    include_in_notifications: true
-
-  rate_limit:
-    max_per_hour: 60
-    max_per_day: 500
 ```
 
-### How It Works
+### Filter Configuration (`config.yaml`)
 
-1. **Email arrives** matching your filters
-2. **AI service** generates summary (if enabled)
-3. **Summary includes**:
-   - Brief overview of email content
-   - Key questions asked (if any)
-   - Action items requested (if any)
-4. **Cached in database** to avoid duplicate API calls
-5. **Displayed in**:
-   - Console output: `🤖 AI: <summary>`
-   - Windows toast notifications with questions/actions
-   - System tray tooltips with full details
+Individual filter rules:
 
-### Example Output
+```yaml
+polling_interval: 45
 
-**Console:**
-```
-📧 MATCH [Job Alert] From: recruiter@linkedin.com | Subject: Senior Engineer Position
+filters:
+  - name: "Job Alerts"
+    from:
+      - linkedin.com
+      - greenhouse.io
+    subject:
+      - interview
+      - opportunity
+    match: any
+    labels:
+      - work
+      - career
+    gmail_scope: inbox
 
-🤖 AI: Recruiter inquiring about interest in senior engineering role at TechCorp.
-        Salary: $150-180K, remote-first, strong benefits package.
-
-❓ Questions:
-  • Are you open to new opportunities?
-  • What's your expected salary range?
-
-✅ Action Items:
-  • Review job description link
-  • Reply with availability for phone screen
-```
-
-**Windows Toast Notification:**
-```
-📧 Senior Engineer Position
-
-🏷️ work 🏷️ career
-From: recruiter@linkedin.com
-
-🤖 Recruiter inquiring about senior engineering role...
-
-❓ Are you open to new opportunities? (+ 1 more)
-
-✅ Review job description link (+ 1 more)
-
-[Open Email]
+  - name: "Social Updates"
+    from:
+      - facebook.com
+      - twitter.com
+    subject: []
+    match: any
+    labels:
+      - social
+    gmail_scope: social
 ```
 
-**System Tray:**
-```
-Recent Alerts
-├─ 🤖 [14:30] Senior Engineer Position
-│   Tooltip: Full AI summary with all questions and actions
-├─ 🔐 [14:15] GitHub verification code
-└─ 📧 [13:45] Weekly team meeting
-```
-
-### Provider Comparison
-
-| Provider | Model | Cost (per 1M tokens) | Free Tier | Speed |
-|----------|-------|---------------------|-----------|-------|
-| **Gemini** | Flash | $0 (free tier) | Generous | Very Fast |
-| Claude | Haiku | $0.25 / $1.25 | No | Fast |
-| OpenAI | GPT-4o-mini | $0.15 / $0.60 | No | Fast |
-
-**Recommendation:** Start with Gemini Flash (free) and switch to paid providers if needed.
-
-### Cost Optimization
-
-- **Use Gemini Flash**: Free tier with generous limits
-- **Enable Caching**: Avoid duplicate API calls (`enable_cache: true`)
-- **Priority Only**: Only summarize urgent emails (`priority_only: true`)
-- **Rate Limits**: Set reasonable hourly/daily caps
-- **Timeout Control**: Limit API call duration (`timeout_seconds: 15`)
-
-### Privacy & Security
-
-- **API Keys**: Stored locally via environment variables
-- **No Data Retention**: Email content sent to AI providers for summarization only
-- **Local Caching**: Summaries cached in local SQLite database
-- **Provider Choice**: Choose your preferred AI provider based on privacy needs
-
-## 🔐 OTP/2FA Code Detection
-
-Email Sentinel automatically detects and extracts one-time passwords (OTP) and two-factor authentication (2FA) codes from your emails.
-
-### Features
-
-- **Automatic Detection**: Extracts OTP codes from Gmail, GitHub, Amazon, PayPal, and 15+ other services
-- **Smart Pattern Matching**: 10 built-in patterns with confidence scoring
-- **False Positive Prevention**: Filters out invoice numbers, phone numbers, and sequential digits
-- **Auto-Expiry**: Codes automatically expire after 5 minutes (configurable)
-- **Clipboard Integration**: Copy codes instantly with auto-clear for security
-- **Database Storage**: View recent codes even if you missed the email
-
-### Quick Start
-
-The setup wizard (Step 5) guides you through OTP configuration, or configure manually:
-
-```bash
-# Enable OTP detection (done automatically by wizard)
-# Config saved to: otp_rules.yaml in config directory
-
-# View recent OTP codes
-email-sentinel otp list
-
-# Get most recent code and copy to clipboard
-email-sentinel otp get
-
-# Test OTP detection
-email-sentinel otp test "Your verification code is 482716"
-```
-
-### Commands
-
-| Command | Description |
-|---------|-------------|
-| `email-sentinel otp list` | List recent OTP codes |
-| `email-sentinel otp list --active` | Show only active (non-expired) codes |
-| `email-sentinel otp get` | Get most recent code and copy to clipboard |
-| `email-sentinel otp clear` | Clear expired codes from database |
-| `email-sentinel otp test <text>` | Test OTP extraction on sample text |
-
-### Example Output
-
-```bash
-$ email-sentinel otp list --active
-
-🔐 Active OTP Codes (2 total)
-
-[1] 🔐 849372 (Confidence: 1.00)
-    From: noreply@github.com
-    Received: 2 minutes ago
-    Expires: in 3 minutes
-    Source: subject
-    ✓ Copied to clipboard
-
-[2] 🔐 482716 (Confidence: 0.95)
-    From: accounts.google.com
-    Received: 4 minutes ago
-    Expires: in 1 minute
-    Source: body
-```
-
-**Windows Toast Notification Example:**
-
-![OTP Toast Notification](images/otp-toast.png)
-
-When an OTP code is detected, Windows users receive a rich toast notification in the Action Center showing the verification code prominently for quick access.
-
-### Configuration
-
-OTP rules are stored in `otp_rules.yaml` (auto-created by wizard):
-
-**Location:**
-- Windows: `%APPDATA%\email-sentinel\otp_rules.yaml`
-- macOS: `~/Library/Application Support/email-sentinel/otp_rules.yaml`
-- Linux: `~/.config/email-sentinel/otp_rules.yaml`
-
-**Example Configuration:**
+### OTP Detection (`otp_rules.yaml`)
 
 ```yaml
 enabled: true
@@ -986,338 +719,80 @@ confidence_threshold: 0.7
 auto_copy_to_clipboard: false
 clipboard_auto_clear: "2m"
 
-# Sender domains known to send OTP codes
-# Emails from these get higher confidence scores
 trusted_otp_senders:
   - accounts.google.com
   - noreply@github.com
   - amazon.com
   - paypal.com
-  - microsoft.com
-  - apple.com
-
-# Custom patterns (advanced)
-custom_patterns:
-  - name: "my_bank_code"
-    regex: "Bank code: ([0-9]{6})"
-    confidence: 0.9
 ```
 
-### How It Works
+---
 
-1. **Email arrives** matching your filters
-2. **OTP detector** scans subject, snippet, and body
-3. **Pattern matching** against 10 built-in patterns
-4. **Confidence scoring** (0.0-1.0) based on:
-   - Pattern match strength
-   - Trusted sender bonus (+0.1)
-   - OTP context keywords (+0.1)
-5. **False positive check** (rejects sequential/repeating digits)
-6. **Database storage** with auto-expiry timestamp
-7. **Notification** (optional) when OTP detected
-
-### Supported Services
-
-Email Sentinel recognizes OTP codes from:
-
-- Google/Gmail
-- GitHub
-- Microsoft/Outlook
-- Amazon
-- PayPal
-- Apple
-- Banking institutions
-- Any service using standard OTP formats
-
-### Security Features
-
-- **Auto-Expiry**: Codes expire after 5 minutes by default
-- **Secure Clipboard**: Auto-clear after 2 minutes when using clipboard copy
-- **Local Storage**: All codes stored locally in SQLite, never transmitted
-- **Pattern Validation**: Rejects sequential (123456) and repeating (111111) numbers
-- **Context-Aware**: Only extracts from emails with verification keywords
-
-## 📜 Alert History
-
-All email notifications are automatically saved to a local SQLite database.
-
-### View Alerts
-
-```bash
-# View today's alerts
-email-sentinel alerts
-
-# View last 5 alerts
-email-sentinel alerts --recent 5
-```
-
-### Example Output
-
-```
-📬 Today's Alerts (3 total)
-
-[1] 🔥 2025-12-06 14:30:15
-    Filter: VIP Senders
-    Priority: HIGH
-    From:   boss@company.com
-    Subject: URGENT: Server is down!
-    Preview: We need to address this immediately...
-    Link:   https://mail.google.com/mail/u/0/#all/abc123
-
-[2] 📧 2025-12-06 13:45:22
-    Filter: Job Alerts
-    From:   recruiter@linkedin.com
-    Subject: New job opportunity
-    Link:   https://mail.google.com/mail/u/0/#all/def456
-```
-
-### Features
-
-- **Persistent Storage** - Survives restarts, view missed alerts
-- **Clickable Links** - Direct Gmail permalinks
-- **Auto-Cleanup** - Alerts older than midnight are deleted automatically
-- **Priority Indicators** - Visual distinction between urgent and normal
-
-## 📱 System Tray
-
-Run Email Sentinel as a background app with a system tray icon.
-
-### Start with Tray
-
-```bash
-email-sentinel start --tray
-```
-
-### Features
-
-**Tray Icon:**
-- Normal state: Default email icon
-- Urgent alert: Icon switches to red/orange
-- Tooltip shows monitoring status
-
-**Menu Options:**
-- **Recent Alerts** - Submenu showing last 10 alerts
-  - Click any alert to open in Gmail
-  - Shows time, priority icon, and subject
-- **Open History** - View all alerts in terminal
-- **Quit** - Stop monitoring and exit
-
-### Example Menu
-
-```
-Email Sentinel
-├─ Recent Alerts
-│  ├─ 🔥 [14:30] URGENT: Server is down!
-│  ├─ 📧 [14:15] Weekly team meeting
-│  ├─ 📧 [13:45] New feature request
-│  └─ ...
-├─ ────────────
-├─ Open History
-├─ ────────────
-└─ Quit
-```
-
-### Behavior
-
-- **New Alert Arrives** → Icon flashes urgent color for 5 seconds
-- **Click Alert** → Opens Gmail in browser
-- **Auto-Refresh** → Menu updates every 30 seconds
-- **Background Mode** → No terminal window needed
-
-### Platform Support
-
-- ✅ Windows - System tray (notification area)
-- ✅ macOS - Menu bar
-- ✅ Linux - System tray (GNOME, KDE, etc.)
-
-## 📱 Mobile Notifications
-
-Email Sentinel uses [ntfy.sh](https://ntfy.sh) for free mobile push notifications.
-
-### Setup
-
-1. **Install ntfy app**:
-   - [iOS App Store](https://apps.apple.com/app/ntfy/id1625396347)
-   - [Android Play Store](https://play.google.com/store/apps/details?id=io.heckel.ntfy)
-
-2. **Subscribe to your topic**:
-   - Open ntfy app
-   - Subscribe to a unique topic name (e.g., `michaels-email-alerts-x7k2`)
-   - Use a random/unique name for privacy
-
-3. **Configure email-sentinel**:
-   ```bash
-   email-sentinel config set ntfy_topic "your-topic-name"
-   email-sentinel config set mobile_enabled true
-   ```
+## 🔧 Architecture
 
 ### How It Works
 
 ```
-[Email Matches Filter]
-        ↓
-[HTTP POST to ntfy.sh]
-        ↓
-[Push to your phone]
+┌─────────────────────────────────────────────────────────┐
+│                    EMAIL SENTINEL                       │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│   ┌──────────┐    ┌──────────┐    ┌──────────────┐    │
+│   │ Gmail API│───▶│  Filter  │───▶│Notifications │    │
+│   │ (poll)   │    │  Engine  │    │  • Desktop   │    │
+│   └──────────┘    └──────────┘    │  • Mobile    │    │
+│         │              │           │  • Toast     │    │
+│         │              │           │  • Tray      │    │
+│         ▼              ▼           └──────────────┘    │
+│   ┌──────────┐    ┌──────────┐                         │
+│   │  OAuth   │    │ Config   │                         │
+│   │  Token   │    │  YAML    │                         │
+│   └──────────┘    └──────────┘                         │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
-No account required. Free. Open source.
+### Key Components
 
-## 🏗️ Architecture
-
-### Project Structure
-
-```
-email-sentinel/
-├── cmd/                      # CLI commands (Cobra)
-│   ├── root.go               # Base command + global flags
-│   ├── init.go               # OAuth initialization
-│   ├── start.go              # Start watcher daemon
-│   ├── stop.go               # Stop daemon
-│   ├── status.go             # Check daemon status
-│   ├── config.go             # Config management
-│   ├── filter.go             # Filter parent command
-│   ├── add.go                # filter add
-│   ├── list.go               # filter list
-│   ├── edit.go               # filter edit
-│   └── remove.go             # filter remove
-│
-├── internal/                 # Private packages
-│   ├── config/
-│   │   ├── paths.go          # OS-specific config paths
-│   │   └── manager.go        # Config load/save
-│   │
-│   ├── filter/
-│   │   ├── types.go          # Filter struct definitions
-│   │   └── engine.go         # Filter matching logic
-│   │
-│   ├── gmail/
-│   │   ├── auth.go           # OAuth flow
-│   │   ├── client.go         # Gmail API wrapper
-│   │   └── message.go        # Message parsing
-│   │
-│   ├── notify/
-│   │   ├── desktop.go        # OS notifications
-│   │   └── mobile.go         # ntfy.sh integration
-│   │
-│   └── state/
-│       └── seen.go           # Track processed messages
-│
-├── scripts/
-│   ├── build-all.sh          # Cross-compilation script
-│   └── install-startup.sh    # Register as startup app
-│
-├── main.go                   # Entry point
-├── go.mod
-├── go.sum
-├── README.md
-├── LICENSE
-└── .gitignore
-```
-
-### Central Email Warehousing 
-
-Monitor multiple email accounts by forwarding all emails to a single central Gmail inbox:
-
-![Central Email Warehousing Architecture](images/central-email-warehousing.png)
-
-This diagram shows how emails from multiple accounts (Outlook, Yahoo, Proton, Work Email, Personal Gmail) are forwarded to a central Gmail collector inbox, which Email Sentinel monitors and sends notifications.
-
-For detailed setup instructions, see **[Central Email Setup](docs/central_email_setup.md)**.
+- **Gmail Client** (`internal/gmail/`) - API wrapper with auto-refresh
+- **Filter Engine** (`internal/filter/`) - Match logic with Gmail scope support
+- **Notification System** (`internal/notify/`) - Desktop, mobile, toast
+- **System Tray** (`internal/tray/`) - Background app with menu
+- **Alert Storage** (`internal/storage/`) - SQLite database
+- **AI Service** (`internal/ai/`) - Optional summaries
+- **OTP Detector** (`internal/otp/`) - Code extraction
+- **Priority Rules** (`internal/rules/`) - Urgency classification
 
 ### Data Flow
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         EMAIL SENTINEL                          │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│   ┌─────────────┐    ┌─────────────┐    ┌─────────────────┐    │
-│   │ Gmail API   │───▶│ Filter      │───▶│ Notifications   │    │
-│   │ (polling)   │    │ Engine      │    │                 │    │
-│   └─────────────┘    └─────────────┘    │ ├─ Desktop      │    │
-│         │                   │           │ └─ Mobile       │    │
-│         │                   │           └─────────────────┘    │
-│         ▼                   ▼                                  │
-│   ┌─────────────┐    ┌─────────────┐                           │
-│   │ OAuth Token │    │ Config YAML │                           │
-│   └─────────────┘    └─────────────┘                           │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+1. **Polling**: Gmail API fetches recent messages (per-filter scope)
+2. **Deduplication**: Messages checked against seen state
+3. **Filtering**: Each message tested against all filters
+4. **Priority**: Rules engine evaluates urgency
+5. **AI Summary** (optional): Generate async summary
+6. **OTP Detection**: Extract verification codes
+7. **Notifications**: Send desktop, mobile, toast alerts
+8. **Storage**: Save to SQLite with Gmail links
+9. **Tray Update**: Refresh recent alerts menu
 
-### Key Dependencies
+---
 
-| Package                           | Purpose                    |
-|-----------------------------------|----------------------------|
-| `github.com/spf13/cobra`          | CLI framework              |
-| `github.com/spf13/viper`          | Config management          |
-| `google.golang.org/api/gmail/v1`  | Gmail API client           |
-| `golang.org/x/oauth2/google`      | OAuth 2.0                  |
-| `github.com/gen2brain/beeep`      | Desktop notifications      |
-| `gopkg.in/yaml.v3`                | YAML parsing               |
+## 🛠️ Troubleshooting
 
-## 🛠️ Development
+### "App not verified" during OAuth
 
-### Setup
+**This is normal for personal apps.**
 
-```bash
-# Clone
-git clone https://github.com/yourusername/email-sentinel.git
-cd email-sentinel
+1. Click **"Advanced"**
+2. Click **"Go to email-sentinel (unsafe)"**
+3. Click **"Allow"**
 
-# Install dependencies
-go mod download
-
-# Run locally
-go run . --help
-
-# Build
-go build -o email-sentinel .
-
-# Run tests
-go test ./...
-```
-
-### Adding a New Command
-
-```bash
-# Install cobra-cli
-go install github.com/spf13/cobra-cli@latest
-
-# Add command
-cobra-cli add mycommand
-
-# Add subcommand
-cobra-cli add subcommand -p parentCmd
-```
-
-### Code Style
-
-```bash
-# Format
-go fmt ./...
-
-# Lint (requires golangci-lint)
-golangci-lint run
-
-# Vet
-go vet ./...
-```
-
-## ❓ Troubleshooting
-
-### "App not verified" warning during OAuth
-
-This is expected for personal/development apps. Click:
-1. **Advanced**
-2. **Go to email-sentinel (unsafe)**
-
-Your app only accesses your own Gmail — this is safe.
+Your app only accesses your own Gmail - this is safe.
 
 ### "Access blocked" error
 
 Add your email as a test user:
+
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. APIs & Services → OAuth consent screen
 3. Test users → Add Users
@@ -1325,27 +800,75 @@ Add your email as a test user:
 
 ### Token expired
 
-Re-run initialization:
+Re-authenticate:
 ```bash
 email-sentinel init
 ```
 
-### Notifications not appearing (Windows)
+### Notifications not appearing
 
-Ensure notifications are enabled in Windows Settings:
-- Settings → System → Notifications
-- Enable notifications for your terminal/app
+**Windows:**
+- Settings → System → Notifications → Enable
+- Disable Focus Assist temporarily
+- Enable for PowerShell/CMD/Terminal
 
-### Notifications not appearing (macOS)
-
-Grant notification permissions:
+**macOS:**
 - System Preferences → Notifications
-- Find email-sentinel or your terminal app
+- Find email-sentinel or Terminal
 - Enable "Allow Notifications"
+
+**Linux:**
+- Check notification daemon (notify-send)
+- Desktop environment notification settings
+
+### System tray icon missing
+
+**Windows:**
+- Taskbar settings → Select which icons appear
+- Enable "Email Sentinel"
+- Restart explorer.exe
+
+**macOS:**
+- Icon appears in menu bar (top-right)
+- Check for icon with mailbox symbol
+
+**Linux:**
+- Ensure system tray support (GNOME Shell Extension, etc.)
+
+### Build fails (from source)
+
+**Enable CGO:**
+```bash
+# Windows
+set CGO_ENABLED=1
+
+# macOS/Linux
+export CGO_ENABLED=1
+
+go build -o email-sentinel .
+```
+
+**Install build tools:**
+- Windows: `scoop install mingw`
+- macOS: Install Xcode Command Line Tools
+- Linux: `sudo apt install build-essential`
+
+---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please:
+Contributions welcome! Areas for improvement:
+
+- [ ] Native multi-account OAuth support
+- [ ] Outlook/Microsoft Graph API
+- [ ] Web UI for filter management
+- [ ] Slack/Discord webhook integration
+- [ ] Custom notification sounds
+- [ ] Email digest/summary reports
+- [ ] Filter import/export
+- [ ] IMAP fallback support
+
+**To contribute:**
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -1353,35 +876,31 @@ Contributions are welcome! Please:
 4. Push to branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-### Multi-Account Monitoring
-
-Email Sentinel supports monitoring multiple email accounts through a **central collector inbox** approach:
-
-- Set up email forwarding from all your accounts (Gmail, Outlook, Yahoo, iCloud, etc.)
-- Monitor one central Gmail account with Email Sentinel
-- Forwarded messages retain original sender and subject metadata
-- See detailed setup guide: **[Central Email Setup](docs/central_email_setup.md)**
-
-### Ideas for Contribution
-
-- [ ] Support for Outlook/Microsoft Graph API
-- [ ] Native multi-account OAuth support
-- [ ] Web UI for filter management
-- [ ] Email notification summaries/digests
-- [ ] Custom notification sounds
-- [ ] Slack/Discord webhook integration
-- [ ] Filter import/export
+---
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
 
 ## 🙏 Acknowledgments
 
 - [Cobra](https://github.com/spf13/cobra) - CLI framework
 - [ntfy.sh](https://ntfy.sh) - Free push notification service
 - [Google Gmail API](https://developers.google.com/gmail/api) - Email access
+- [Fyne Systray](https://github.com/fyne-io/systray) - Cross-platform system tray
 
 ---
 
-**Note for AI Agents**: This project uses Go modules. The module path is defined in `go.mod`. All internal packages use the `internal/` directory convention, preventing external imports. Configuration is stored in OS-appropriate locations (see `internal/config/paths.go`). The filter matching logic is in `internal/filter/engine.go`. OAuth tokens are stored separately from app credentials for security.
+## 📞 Support
+
+- **Documentation:** [docs/](docs/)
+- **Issues:** https://github.com/datateamsix/email-sentinel/issues
+- **Discussions:** https://github.com/datateamsix/email-sentinel/discussions
+
+---
+
+**Built with ❤️ by [DataTeamSix](https://github.com/datateamsix)**
+
+**Stop checking email. Start getting notified.** 📧✨

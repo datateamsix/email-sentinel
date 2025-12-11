@@ -70,6 +70,13 @@ func runFilterList(cmd *cobra.Command, args []string) {
 			matchDesc = "all (AND - all conditions must match)"
 		}
 		fmt.Printf("    Match:   %s\n", matchDesc)
+
+		// Show Gmail scope
+		scope := f.GmailScope
+		if scope == "" {
+			scope = "inbox"
+		}
+		fmt.Printf("    Scope:   📬 %s\n", scope)
 	}
 
 	fmt.Println("")

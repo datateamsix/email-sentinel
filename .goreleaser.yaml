@@ -82,6 +82,7 @@ archives:
       - otp_rules.yaml
       - rules.yaml
       - ai-config.yaml
+      - app-config.yaml
 
 # Checksums
 checksum:
@@ -211,6 +212,8 @@ brews:
       # Install config templates
       (etc/"email-sentinel").install "otp_rules.yaml"
       (etc/"email-sentinel").install "rules.yaml"
+      (etc/"email-sentinel").install "app-config.yaml"
+      (etc/"email-sentinel").install "ai-config.yaml"
 
     # Service configuration
     service: |
@@ -295,6 +298,8 @@ dockers:
     extra_files:
       - otp_rules.yaml
       - rules.yaml
+      - app-config.yaml
+      - ai-config.yaml
 
 # GitHub Release configuration
 release:

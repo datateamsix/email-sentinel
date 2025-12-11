@@ -1104,6 +1104,7 @@
                 <button class="tab-btn" onclick="showTab('windows')"><i class="fab fa-windows"></i> Windows</button>
                 <button class="tab-btn" onclick="showTab('linux')"><i class="fab fa-linux"></i> Linux</button>
                 <button class="tab-btn" onclick="showTab('docker')"><i class="fab fa-docker"></i> Docker</button>
+                <button class="tab-btn" onclick="showTab('github')"><i class="fab fa-github"></i> Build from Source</button>
             </div>
 
             <div id="mac" class="tab-content active">
@@ -1119,6 +1120,9 @@ email-sentinel filter add
 
 # Start monitoring with system tray
 email-sentinel start --tray --ai-summary</code></pre>
+                <p style="margin-top: 20px; text-align: center;">
+                    📖 <a href="https://github.com/datateamsix/email-sentinel/blob/main/docs/QUICKSTART_MACOS.md" target="_blank" style="color: var(--primary); font-weight: 600;">macOS Quickstart Guide</a>
+                </p>
             </div>
 
             <div id="windows" class="tab-content">
@@ -1134,6 +1138,9 @@ email-sentinel filter add
 
 # Start monitoring with system tray
 email-sentinel start --tray --ai-summary</code></pre>
+                <p style="margin-top: 20px; text-align: center;">
+                    📖 <a href="https://github.com/datateamsix/email-sentinel/blob/main/docs/QUICKSTART_WINDOWS.md" target="_blank" style="color: var(--primary); font-weight: 600;">Windows Quickstart Guide</a>
+                </p>
             </div>
 
             <div id="linux" class="tab-content">
@@ -1150,6 +1157,9 @@ email-sentinel init
 
 # Start monitoring
 email-sentinel start --tray</code></pre>
+                <p style="margin-top: 20px; text-align: center;">
+                    📖 <a href="https://github.com/datateamsix/email-sentinel/blob/main/docs/QUICKSTART_LINUX.md" target="_blank" style="color: var(--primary); font-weight: 600;">Linux Quickstart Guide</a>
+                </p>
             </div>
 
             <div id="docker" class="tab-content">
@@ -1163,6 +1173,33 @@ docker run -v ~/.email-sentinel:/root/.email-sentinel \
 # Or use docker-compose
 curl -O https://raw.githubusercontent.com/datateamsix/email-sentinel/main/docker-compose.yml
 docker-compose up -d</code></pre>
+                <p style="margin-top: 20px; text-align: center;">
+                    📖 <a href="https://github.com/datateamsix/email-sentinel/blob/main/README.md#docker" target="_blank" style="color: var(--primary); font-weight: 600;">Docker Setup Guide</a>
+                </p>
+            </div>
+
+            <div id="github" class="tab-content">
+                <pre><code># Clone the repository
+git clone https://github.com/datateamsix/email-sentinel.git
+cd email-sentinel
+
+# Build from source (requires Go 1.22+)
+go build -o email-sentinel .
+
+# Or use the Makefile
+make build
+
+# Initialize and authenticate
+./email-sentinel init
+
+# Add your first filter
+./email-sentinel filter add
+
+# Start monitoring
+./email-sentinel start --tray</code></pre>
+                <p style="margin-top: 20px; text-align: center;">
+                    📖 <a href="https://github.com/datateamsix/email-sentinel/blob/main/docs/BUILD_TO_FIRST_ALERT.md" target="_blank" style="color: var(--primary); font-weight: 600;">Build from Source Guide</a>
+                </p>
             </div>
         </div>
     </section>

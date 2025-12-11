@@ -341,6 +341,122 @@
             opacity: 1;
             transform: translateY(0);
         }
+
+        /* Demo Video Section */
+        .demo-video {
+            padding: 80px 0;
+            background: white;
+        }
+
+        .video-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .video-placeholder {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 100px 40px;
+            text-align: center;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .video-placeholder:hover {
+            transform: scale(1.02);
+        }
+
+        .play-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .video-placeholder p {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .video-placeholder small {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* Use Cases Section */
+        .use-cases {
+            padding: 100px 0;
+            background: var(--light);
+        }
+
+        .use-case-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 40px;
+        }
+
+        .use-case-card {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+
+        .use-case-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+        }
+
+        .use-case-icon {
+            font-size: 3.5rem;
+            display: block;
+            margin-bottom: 20px;
+        }
+
+        .use-case-card h3 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            color: var(--dark);
+            font-weight: 600;
+        }
+
+        .use-case-card p {
+            color: var(--text);
+            margin-bottom: 25px;
+            line-height: 1.7;
+            font-size: 1.05rem;
+        }
+
+        .screenshot-placeholder {
+            border-radius: 10px;
+            overflow: hidden;
+            background: var(--light);
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .screenshot-placeholder img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .placeholder-box {
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--text);
+            font-size: 0.95rem;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+        @media (max-width: 768px) {
+            .use-case-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -349,7 +465,8 @@
         <div class="container hero-content">
             <div class="logo">📧</div>
             <h1>Email Sentinel</h1>
-            <p class="tagline">A lightweight, smart real-time notification management system that protects your focus and productivity</p>
+            <p class="tagline" style="font-size: 1.5rem; font-weight: 600;">Stop wasting time digging for emails. Get notified on the important stuff.</p>
+            <p class="tagline" style="margin-top: 10px;">Email notifications are blunt instruments. Email Sentinel is your simple, no-frills workhorse scalpel for cutting through the BS and noise of email.</p>
             <div class="cta-buttons">
                 <a href="https://github.com/datateamsix/email-sentinel/releases/latest" class="btn btn-primary">
                     ⬇️ Download Latest
@@ -361,45 +478,72 @@
         </div>
     </header>
 
-    <!-- Features Section -->
-    <section class="features">
+    <!-- Demo Video Section -->
+    <section class="demo-video">
         <div class="container">
-            <h2 class="section-title">✨ Powerful Features</h2>
-            <div class="feature-grid">
-                <div class="feature-card fade-in">
-                    <span class="feature-icon">🔔</span>
-                    <h3>Real-Time Alerts</h3>
-                    <p>Get instant desktop and mobile notifications when emails match your custom filters</p>
+            <h2 class="section-title">See It In Action</h2>
+            <div class="video-container">
+                <!-- Placeholder for demo video -->
+                <div class="video-placeholder">
+                    <div class="play-icon">▶️</div>
+                    <p>2-Minute Demo Video</p>
+                    <small>Coming Soon: Watch Email Sentinel in action</small>
+                </div>
+                <!-- Replace with actual video embed:
+                <iframe width="100%" height="500" src="https://www.youtube.com/embed/YOUR_VIDEO_ID" frameborder="0" allowfullscreen></iframe>
+                -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Use Cases Section -->
+    <section class="use-cases">
+        <div class="container">
+            <h2 class="section-title">5 Killer Use Cases</h2>
+            <div class="use-case-grid">
+                <div class="use-case-card fade-in">
+                    <span class="use-case-icon">🎯</span>
+                    <h3>Job Hunting</h3>
+                    <p>Stop refreshing LinkedIn every 10 minutes. Get instant alerts for interview invites, recruiter messages, and application updates—even when buried in promotions.</p>
+                    <div class="screenshot-placeholder">
+                        <img src="../images/screenshot-job-alerts.png" alt="Job alerts screenshot" onerror="this.parentElement.innerHTML='<div class=\'placeholder-box\'>📸 Screenshot Coming Soon<br>Job Alert Notification</div>'">
+                    </div>
                 </div>
 
-                <div class="feature-card fade-in">
-                    <span class="feature-icon">🤖</span>
-                    <h3>AI Summaries</h3>
-                    <p>Optional AI-powered email summaries with questions and action items (Claude, OpenAI, Gemini)</p>
+                <div class="use-case-card fade-in">
+                    <span class="use-case-icon">🔐</span>
+                    <h3>OTP Codes</h3>
+                    <p>Stop switching between email and your login screen. Email Sentinel auto-extracts 2FA codes and copies them to your clipboard the second they arrive.</p>
+                    <div class="screenshot-placeholder">
+                        <img src="../images/otp-toast.png" alt="OTP notification">
+                    </div>
                 </div>
 
-                <div class="feature-card fade-in">
-                    <span class="feature-icon">🔐</span>
-                    <h3>OTP Detection</h3>
-                    <p>Automatically extract and manage 2FA verification codes from your emails</p>
+                <div class="use-case-card fade-in">
+                    <span class="use-case-icon">👔</span>
+                    <h3>VIP Alerts</h3>
+                    <p>Your boss emails at 11 PM. You see it at 11:01. Never miss time-sensitive messages from executives, clients, or anyone who signs your paychecks.</p>
+                    <div class="screenshot-placeholder">
+                        <img src="../images/screenshot-vip-alert.png" alt="VIP alert" onerror="this.parentElement.innerHTML='<div class=\'placeholder-box\'>📸 Screenshot Coming Soon<br>VIP Priority Notification</div>'">
+                    </div>
                 </div>
 
-                <div class="feature-card fade-in">
-                    <span class="feature-icon">🏷️</span>
-                    <h3>Smart Filters</h3>
-                    <p>Organize with labels, priority rules, and flexible AND/OR matching logic</p>
+                <div class="use-case-card fade-in">
+                    <span class="use-case-icon">🚨</span>
+                    <h3>Spam Rescue</h3>
+                    <p>Gmail thinks your contractor's invoice is spam. You think differently. Monitor spam and promotions for important senders you actually care about.</p>
+                    <div class="screenshot-placeholder">
+                        <img src="../images/screenshot-spam-rescue.png" alt="Spam rescue" onerror="this.parentElement.innerHTML='<div class=\'placeholder-box\'>📸 Screenshot Coming Soon<br>Rescued Email from Spam</div>'">
+                    </div>
                 </div>
 
-                <div class="feature-card fade-in">
-                    <span class="feature-icon">💻</span>
-                    <h3>Cross-Platform</h3>
-                    <p>Single binary for Windows, macOS (Intel + ARM), and Linux (amd64, arm64)</p>
-                </div>
-
-                <div class="feature-card fade-in">
-                    <span class="feature-icon">🔒</span>
-                    <h3>Secure & Private</h3>
-                    <p>OAuth 2.0 authentication with local storage. No data leaves your machine.</p>
+                <div class="use-case-card fade-in">
+                    <span class="use-case-icon">⚡</span>
+                    <h3>Urgent Keywords</h3>
+                    <p>Words like "ASAP", "urgent", "EOD", and "deadline" trigger instant alerts. Because some emails can't wait until your next inbox check.</p>
+                    <div class="screenshot-placeholder">
+                        <img src="../images/screenshot-urgent-keywords.png" alt="Urgent detection" onerror="this.parentElement.innerHTML='<div class=\'placeholder-box\'>📸 Screenshot Coming Soon<br>Urgent Keyword Detection</div>'">
+                    </div>
                 </div>
             </div>
         </div>

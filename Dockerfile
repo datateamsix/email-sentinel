@@ -18,6 +18,7 @@ COPY . .
 
 # Build the application
 # CGO_ENABLED=0 for static binary (modernc.org/sqlite is CGO-free)
+ARG VERSION
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-s -w -X github.com/datateamsix/email-sentinel/internal/ui.AppVersion=${VERSION:-dev}" \
     -o email-sentinel .

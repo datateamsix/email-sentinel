@@ -229,6 +229,8 @@ dockers:
     # Build arguments
     build_flag_templates:
       - "--pull"
+      - "--build-arg"
+      - "VERSION={{.Version}}"
       - "--label=org.opencontainers.image.created={{.Date}}"
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"

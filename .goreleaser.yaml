@@ -6,83 +6,25 @@ version: 2
 # Project metadata
 project_name: email-sentinel
 
-# Before hooks - run tests before building
-before:
-  hooks:
-    - go mod tidy
-    - go test ./...
-
-# Build configuration
-builds:
-  - id: email-sentinel
-    main: .
-    binary: email-sentinel
-
-    # Environment variables for build
-    env:
-      - CGO_ENABLED=0  # Pure Go build (modernc.org/sqlite is CGO-free)
-
-    # Linker flags for version injection and optimization
-    ldflags:
-      - -s -w  # Strip debug info (reduces binary size)
-      - -X github.com/datateamsix/email-sentinel/internal/ui.AppVersion={{.Version}}
-      - -X github.com/datateamsix/email-sentinel/internal/ui.BuildTime={{.Date}}
-      - -X github.com/datateamsix/email-sentinel/internal/ui.GitCommit={{.ShortCommit}}
-
-    # Target platforms
-    goos:
-      - windows
-      - darwin
-      - linux
-
-    # Target architectures
-    goarch:
-      - amd64
-      - arm64
-      - "386"  # Windows 32-bit support
-
-    # Ignore invalid combinations
-    ignore:
-      - goos: darwin
-        goarch: "386"
-      - goos: linux
-        goarch: "386"
-
-    # Windows-specific settings
-    mod_timestamp: "{{ .CommitTimestamp }}"
-
-# Universal macOS binary (combines amd64 + arm64)
-universal_binaries:
-  - id: email-sentinel-universal
-    replace: true
-    name_template: email-sentinel
-
 # Archive configuration (tar.gz for Unix, zip for Windows)
 archives:
-  - id: default
-    format: tar.gz
+  - format: tar.gz
     name_template: >-
-      {{ .ProjectName }}_
-      {{- .Version }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
-
+      {{ .ProjectName }}_{{ .Version }}_{{- if eq .Os "darwin" }}macOS{{- else }}{{ .Os }}{{ end }}_{{- .Arch }}
     format_overrides:
       - goos: windows
         format: zip
-
-    # Files to include in archives
     files:
       - README.md
       - LICENSE
       - docs/**/*
       - otp_rules.yaml
       - rules.yaml
-      - ai-config.yaml
       - app-config.yaml
+
+# Release plan moved to docs/release_plan.md
+# See: docs/release_plan.md for the original execution checklist and steps.
+
 
 # Checksums
 checksum:

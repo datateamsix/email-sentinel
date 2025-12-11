@@ -76,6 +76,17 @@
             z-index: 1;
         }
 
+        .logo-container {
+            margin-bottom: 20px;
+        }
+
+        .hero-gopher {
+            width: 180px;
+            height: auto;
+            animation: float 3s ease-in-out infinite;
+            filter: drop-shadow(0 4px 15px rgba(0,0,0,0.2));
+        }
+
         .logo {
             font-size: 4rem;
             margin-bottom: 20px;
@@ -101,6 +112,19 @@
             max-width: 700px;
             margin-left: auto;
             margin-right: auto;
+        }
+
+        .built-with-go {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+            margin: 20px 0 30px;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 30px;
+            display: inline-block;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .cta-buttons {
@@ -457,16 +481,65 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Why Go Section */
+        .why-go {
+            padding: 100px 0;
+            background: white;
+        }
+
+        .go-benefits {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .go-benefit {
+            text-align: center;
+            padding: 30px;
+        }
+
+        .go-icon {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+        }
+
+        .go-benefit h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: var(--dark);
+            font-weight: 600;
+        }
+
+        .go-benefit p {
+            color: var(--text);
+            line-height: 1.7;
+            font-size: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .go-benefits {
+                grid-template-columns: 1fr;
+            }
+            .hero-gopher {
+                width: 140px;
+            }
+        }
     </style>
 </head>
 <body>
     <!-- Hero Section -->
     <header>
         <div class="container hero-content">
-            <div class="logo">📧</div>
+            <div class="logo-container">
+                <img src="../images/go-night.svg" alt="Email Sentinel Gopher" class="hero-gopher">
+            </div>
             <h1>Email Sentinel</h1>
             <p class="tagline" style="font-size: 1.5rem; font-weight: 600;">Stop wasting time digging for emails. Get notified on the important stuff.</p>
             <p class="tagline" style="margin-top: 10px;">Email notifications are blunt instruments. Email Sentinel is your simple, no-frills workhorse scalpel for cutting through the BS and noise of email.</p>
+            <p class="built-with-go">⚡ Built with Go — Fast, lightweight, single binary</p>
             <div class="cta-buttons">
                 <a href="https://github.com/datateamsix/email-sentinel/releases/latest" class="btn btn-primary">
                     ⬇️ Download Latest
@@ -549,6 +622,35 @@
         </div>
     </section>
 
+    <!-- Why Go Section -->
+    <section class="why-go">
+        <div class="container">
+            <h2 class="section-title">Why Go?</h2>
+            <div class="go-benefits">
+                <div class="go-benefit fade-in">
+                    <div class="go-icon">🚀</div>
+                    <h3>Lightning Fast</h3>
+                    <p>Compiled binary starts instantly. No runtime dependencies. Just double-click and run.</p>
+                </div>
+                <div class="go-benefit fade-in">
+                    <div class="go-icon">📦</div>
+                    <h3>Single Binary</h3>
+                    <p>Everything in one file. No installers, no package managers needed. Download and go.</p>
+                </div>
+                <div class="go-benefit fade-in">
+                    <div class="go-icon">💾</div>
+                    <h3>Tiny Footprint</h3>
+                    <p>Uses ~30MB RAM idle. Won't slow down your system. Runs quietly in the background.</p>
+                </div>
+                <div class="go-benefit fade-in">
+                    <div class="go-icon">🌐</div>
+                    <h3>True Cross-Platform</h3>
+                    <p>Same codebase for Windows, macOS, and Linux. Intel and ARM. No compromises.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Stats Section -->
     <section class="stats">
         <div class="container">
@@ -562,11 +664,11 @@
                     <p>Licensed</p>
                 </div>
                 <div class="stat-item">
-                    <h3>Free</h3>
-                    <p>Gmail API Tier</p>
+                    <h3>~30MB</h3>
+                    <p>RAM Usage</p>
                 </div>
                 <div class="stat-item">
-                    <h3>3+</h3>
+                    <h3>6</h3>
                     <p>Platforms</p>
                 </div>
             </div>

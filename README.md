@@ -1,6 +1,6 @@
 # 📧 Email Sentinel
 
-![Email Sentinel Logo](docs/images/logo.png)
+![Email Sentinel Gopher](docs/images/go-night.svg)
 
 **Stop wasting time digging for emails in your inbox. Get notified on the important stuff as it arrives.**
 

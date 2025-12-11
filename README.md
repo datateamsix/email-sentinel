@@ -2,7 +2,9 @@
 
 ![Email Sentinel Logo](images/logo.png)
 
-**Stop checking email like an addict. Get instant alerts for what matters.**
+**A lightweight, smart real-time notification management system that protects your focus and productivity.**
+
+Stop checking email compulsively. Get instant alerts only for what matters.
 
 [![Latest Release](https://img.shields.io/github/v/release/datateamsix/email-sentinel)](https://github.com/datateamsix/email-sentinel/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/datateamsix/email-sentinel/total)](https://github.com/datateamsix/email-sentinel/releases)
@@ -903,4 +905,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ by [DataTeamSix](https://github.com/datateamsix)**
 
-**Stop checking email. Start getting notified.** 📧✨
+**Protect your productivity. Never miss what matters.** 📧✨

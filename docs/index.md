@@ -1,6 +1,6 @@
 # 📚 Email Sentinel Documentation
 
-Complete documentation for Email Sentinel - the smart Gmail monitoring and notification tool.
+Complete documentation for Email Sentinel - a lightweight, smart real-time notification management system that protects your focus and productivity.
 
 ---
 

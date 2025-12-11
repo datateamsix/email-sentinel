@@ -437,8 +437,11 @@
 
         .use-case-icon {
             font-size: 3.5rem;
-            display: block;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             margin-bottom: 20px;
+            color: var(--primary);
         }
 
         .use-case-card h3 {
@@ -597,6 +600,54 @@
             box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
         }
 
+        /* What's Built In Section */
+        .features-section {
+            padding: 100px 0;
+            background: white;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            padding: 20px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .feature-item:hover {
+            background: var(--light);
+            transform: translateX(5px);
+        }
+
+        .feature-check {
+            font-size: 1.5rem;
+            color: var(--secondary);
+            flex-shrink: 0;
+            margin-top: 3px;
+        }
+
+        .feature-content h4 {
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+            color: var(--dark);
+            font-weight: 600;
+        }
+
+        .feature-content p {
+            color: var(--text);
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
         @media (max-width: 968px) {
             .warehousing-content {
                 grid-template-columns: 1fr;
@@ -607,6 +658,9 @@
             }
             .hero-gopher {
                 width: 140px;
+            }
+            .features-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -651,14 +705,118 @@
         </div>
     </section>
 
-    <!-- Use Cases Section -->
+    <!-- What's Built In Section -->
+    <section class="features-section">
+        <div class="container">
+            <h2 class="section-title">What's Built In</h2>
+            <div class="features-grid">
+                <div class="feature-item fade-in">
+                    <span class="feature-check"><i class="fas fa-check-circle"></i></span>
+                    <div class="feature-content">
+                        <h4>Gmail API Integration</h4>
+                        <p>Real-time monitoring via official Gmail API, no IMAP polling or third-party services</p>
+                    </div>
+                </div>
+
+                <div class="feature-item fade-in">
+                    <span class="feature-check"><i class="fas fa-check-circle"></i></span>
+                    <div class="feature-content">
+                        <h4>Smart Filtering</h4>
+                        <p>Filter by sender, subject, keywords, or combine them—monitor exactly what matters</p>
+                    </div>
+                </div>
+
+                <div class="feature-item fade-in">
+                    <span class="feature-check"><i class="fas fa-check-circle"></i></span>
+                    <div class="feature-content">
+                        <h4>OTP Auto-Extract</h4>
+                        <p>Instantly extract 2FA codes and copy to clipboard—no more hunting through emails</p>
+                    </div>
+                </div>
+
+                <div class="feature-item fade-in">
+                    <span class="feature-check"><i class="fas fa-check-circle"></i></span>
+                    <div class="feature-content">
+                        <h4>AI Summaries (Optional)</h4>
+                        <p>Get email summaries with Claude, GPT, or Gemini—decide if it's worth your attention</p>
+                    </div>
+                </div>
+
+                <div class="feature-item fade-in">
+                    <span class="feature-check"><i class="fas fa-check-circle"></i></span>
+                    <div class="feature-content">
+                        <h4>Desktop + Mobile Notifications</h4>
+                        <p>Native system tray app on Windows/macOS/Linux, plus free mobile push via ntfy.sh</p>
+                    </div>
+                </div>
+
+                <div class="feature-item fade-in">
+                    <span class="feature-check"><i class="fas fa-check-circle"></i></span>
+                    <div class="feature-content">
+                        <h4>Gmail Category Scopes</h4>
+                        <p>Monitor inbox, social, promotions, spam—rescue important emails from anywhere</p>
+                    </div>
+                </div>
+
+                <div class="feature-item fade-in">
+                    <span class="feature-check"><i class="fas fa-check-circle"></i></span>
+                    <div class="feature-content">
+                        <h4>Local-First Privacy</h4>
+                        <p>OAuth credentials stored locally, no data sent to third parties—your email stays yours</p>
+                    </div>
+                </div>
+
+                <div class="feature-item fade-in">
+                    <span class="feature-check"><i class="fas fa-check-circle"></i></span>
+                    <div class="feature-content">
+                        <h4>Encrypted Storage</h4>
+                        <p>OAuth tokens encrypted at rest with AES-256—military-grade security for your credentials</p>
+                    </div>
+                </div>
+
+                <div class="feature-item fade-in">
+                    <span class="feature-check"><i class="fas fa-check-circle"></i></span>
+                    <div class="feature-content">
+                        <h4>Alert History & Links</h4>
+                        <p>View past alerts and jump directly to emails in Gmail—full audit trail included</p>
+                    </div>
+                </div>
+
+                <div class="feature-item fade-in">
+                    <span class="feature-check"><i class="fas fa-check-circle"></i></span>
+                    <div class="feature-content">
+                        <h4>Lightweight & Fast</h4>
+                        <p>Single Go binary, ~30MB RAM usage—runs silently without slowing down your system</p>
+                    </div>
+                </div>
+
+                <div class="feature-item fade-in">
+                    <span class="feature-check"><i class="fas fa-check-circle"></i></span>
+                    <div class="feature-content">
+                        <h4>Cross-Platform</h4>
+                        <p>Works on Windows, macOS, Linux—install via Homebrew, Scoop, APT, RPM, or Docker</p>
+                    </div>
+                </div>
+
+                <div class="feature-item fade-in">
+                    <span class="feature-check"><i class="fas fa-check-circle"></i></span>
+                    <div class="feature-content">
+                        <h4>100% Open Source</h4>
+                        <p>MIT licensed, full source code available—audit, modify, or contribute freely</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sample Use Cases Section -->
     <section class="use-cases">
         <div class="container">
-            <h2 class="section-title">6 Killer Use Cases</h2>
+            <h2 class="section-title">3 Sample Use Cases</h2>
             <div class="use-case-grid">
                 <div class="use-case-card fade-in">
                     <span class="use-case-icon"><i class="fas fa-bullseye"></i></span>
-                    <h3>Job Hunting</h3>
+                    <h3>Job Alerts</h3>
                     <p>Stop refreshing LinkedIn every 10 minutes. Get instant alerts for interview invites, recruiter messages, and application updates—even when buried in promotions.</p>
                     <div class="cli-example">
 <pre><code>email-sentinel filter add \
@@ -684,19 +842,6 @@
                 </div>
 
                 <div class="use-case-card fade-in">
-                    <span class="use-case-icon"><i class="fas fa-briefcase"></i></span>
-                    <h3>Sales Rep - Target Domains</h3>
-                    <p>Monitor specific company domains for inbound leads, replies, or warm intros. Get notified the second a prospect from your target account list reaches out.</p>
-                    <div class="cli-example">
-<pre><code>email-sentinel filter add \
-  --name "Enterprise Prospects" \
-  --from "@stripe.com,@shopify.com,@figma.com" \
-  --scope "all-except-trash" \
-  --labels "sales,hot-lead,priority"</code></pre>
-                    </div>
-                </div>
-
-                <div class="use-case-card fade-in">
                     <span class="use-case-icon"><i class="fas fa-star"></i></span>
                     <h3>VIP Alerts</h3>
                     <p>Your boss emails at 11 PM. You see it at 11:01. Never miss time-sensitive messages from executives, clients, or anyone who signs your paychecks.</p>
@@ -706,32 +851,6 @@
   --from "ceo@company.com,boss@company.com" \
   --scope inbox \
   --labels "work,vip,urgent"</code></pre>
-                    </div>
-                </div>
-
-                <div class="use-case-card fade-in">
-                    <span class="use-case-icon"><i class="fas fa-shield-alt"></i></span>
-                    <h3>Spam Rescue</h3>
-                    <p>Gmail thinks your contractor's invoice is spam. You think differently. Monitor spam and promotions for important senders you actually care about.</p>
-                    <div class="cli-example">
-<pre><code>email-sentinel filter add \
-  --name "Spam Rescue - Contractors" \
-  --from "freelancer@startup.com" \
-  --scope "all-except-trash" \
-  --labels "spam-rescue,important"</code></pre>
-                    </div>
-                </div>
-
-                <div class="use-case-card fade-in">
-                    <span class="use-case-icon"><i class="fas fa-bolt"></i></span>
-                    <h3>Urgent Keywords</h3>
-                    <p>Words like "ASAP", "urgent", "EOD", and "deadline" trigger instant alerts. Because some emails can't wait until your next inbox check.</p>
-                    <div class="cli-example">
-<pre><code>email-sentinel filter add \
-  --name "Urgent Keywords" \
-  --subject "urgent,asap,deadline,eod" \
-  --scope "inbox+primary" \
-  --labels "urgent"</code></pre>
                     </div>
                 </div>
             </div>

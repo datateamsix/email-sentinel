@@ -139,23 +139,24 @@ brews:
     test: |
       system "#{bin}/email-sentinel", "--version"
 
-# Docker images
-dockers:
-  - id: email-sentinel
-    image_templates:
-      - "datateamsix/email-sentinel:latest"
-      - "datateamsix/email-sentinel:{{ .Version }}"
-      - "datateamsix/email-sentinel:{{ .Major }}"
-      - "datateamsix/email-sentinel:{{ .Major }}.{{ .Minor }}"
-    build_flag_templates:
-      - "--pull"
-      - "--build-arg=VERSION={{.Version}}"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--label=org.opencontainers.image.source={{.GitURL}}"
-    dockerfile: Dockerfile
+# Docker images - Disabled for v1.0.0 (macOS runners don't have Docker)
+# Will be re-enabled in v1.0.1 with multi-platform workflow
+# dockers:
+#   - id: email-sentinel
+#     image_templates:
+#       - "datateamsix/email-sentinel:latest"
+#       - "datateamsix/email-sentinel:{{ .Version }}"
+#       - "datateamsix/email-sentinel:{{ .Major }}"
+#       - "datateamsix/email-sentinel:{{ .Major }}.{{ .Minor }}"
+#     build_flag_templates:
+#       - "--pull"
+#       - "--build-arg=VERSION={{.Version}}"
+#       - "--label=org.opencontainers.image.created={{.Date}}"
+#       - "--label=org.opencontainers.image.title={{.ProjectName}}"
+#       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+#       - "--label=org.opencontainers.image.version={{.Version}}"
+#       - "--label=org.opencontainers.image.source={{.GitURL}}"
+#     dockerfile: Dockerfile
 
 # Scoop manifest (Windows package manager)
 scoops:

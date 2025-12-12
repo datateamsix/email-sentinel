@@ -944,3 +944,259 @@ func GetAISummaryByMessageID(db *sql.DB, messageID string) (*EmailSummary, error
 
 	return &summary, nil
 }
+
+// ======================================
+// Digital Accounts Functions
+// ======================================
+
+// Account represents a digital account (subscription, trial, or free)
+type Account struct {
+	ID             int64
+	ServiceName    string
+	EmailAddress   string
+	AccountType    string  // "trial", "paid", "free"
+	Status         string  // "active", "cancelled"
+	PriceMonthly   float64
+	TrialEndDate   *time.Time
+	GmailMessageID string
+	DetectedAt     time.Time
+	UpdatedAt      time.Time
+	Confidence     float64
+	CancelURL      string
+	Category       string
+}
+
+// InsertAccount saves a new account to the database
+func InsertAccount(db *sql.DB, acc *Account) error {
+	query := `
+		INSERT INTO accounts (
+			service_name, email_address, account_type, status, price_monthly,
+			trial_end_date, gmail_message_id, detected_at, updated_at, confidence,
+			cancel_url, category
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`
+
+	var trialEndUnix *int64
+	if acc.TrialEndDate != nil {
+		unix := acc.TrialEndDate.Unix()
+		trialEndUnix = &unix
+	}
+
+	result, err := db.Exec(
+		query,
+		acc.ServiceName,
+		acc.EmailAddress,
+		acc.AccountType,
+		acc.Status,
+		acc.PriceMonthly,
+		trialEndUnix,
+		acc.GmailMessageID,
+		acc.DetectedAt.Unix(),
+		acc.UpdatedAt.Unix(),
+		acc.Confidence,
+		acc.CancelURL,
+		acc.Category,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to insert account: %w", err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return fmt.Errorf("failed to get insert ID: %w", err)
+	}
+
+	acc.ID = id
+	return nil
+}
+
+// GetAllAccounts returns all accounts ordered by most recently detected
+func GetAllAccounts(db *sql.DB) ([]Account, error) {
+	query := `
+		SELECT
+			id, service_name, email_address, account_type, status, price_monthly,
+			trial_end_date, gmail_message_id, detected_at, updated_at, confidence,
+			cancel_url, category
+		FROM accounts
+		ORDER BY detected_at DESC
+	`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query accounts: %w", err)
+	}
+	defer rows.Close()
+
+	return scanAccounts(rows)
+}
+
+// GetAccountsByType returns accounts filtered by type (trial, paid, free)
+func GetAccountsByType(db *sql.DB, accountType string) ([]Account, error) {
+	query := `
+		SELECT
+			id, service_name, email_address, account_type, status, price_monthly,
+			trial_end_date, gmail_message_id, detected_at, updated_at, confidence,
+			cancel_url, category
+		FROM accounts
+		WHERE account_type = ? AND status = 'active'
+		ORDER BY detected_at DESC
+	`
+
+	rows, err := db.Query(query, accountType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query accounts by type: %w", err)
+	}
+	defer rows.Close()
+
+	return scanAccounts(rows)
+}
+
+// GetActiveTrials returns all active trial accounts
+func GetActiveTrials(db *sql.DB) ([]Account, error) {
+	query := `
+		SELECT
+			id, service_name, email_address, account_type, status, price_monthly,
+			trial_end_date, gmail_message_id, detected_at, updated_at, confidence,
+			cancel_url, category
+		FROM accounts
+		WHERE account_type = 'trial' AND status = 'active' AND trial_end_date IS NOT NULL
+		ORDER BY trial_end_date ASC
+	`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query active trials: %w", err)
+	}
+	defer rows.Close()
+
+	return scanAccounts(rows)
+}
+
+// SearchAccounts searches for accounts by service name (case-insensitive)
+func SearchAccounts(db *sql.DB, searchTerm string) ([]Account, error) {
+	query := `
+		SELECT
+			id, service_name, email_address, account_type, status, price_monthly,
+			trial_end_date, gmail_message_id, detected_at, updated_at, confidence,
+			cancel_url, category
+		FROM accounts
+		WHERE service_name LIKE ? COLLATE NOCASE
+		ORDER BY detected_at DESC
+	`
+
+	searchPattern := "%" + searchTerm + "%"
+	rows, err := db.Query(query, searchPattern)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search accounts: %w", err)
+	}
+	defer rows.Close()
+
+	return scanAccounts(rows)
+}
+
+// UpdateAccountStatus updates the status of an account
+func UpdateAccountStatus(db *sql.DB, id int64, status string) error {
+	query := "UPDATE accounts SET status = ?, updated_at = ? WHERE id = ?"
+
+	result, err := db.Exec(query, status, time.Now().Unix(), id)
+	if err != nil {
+		return fmt.Errorf("failed to update account status: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("account with ID %d not found", id)
+	}
+
+	return nil
+}
+
+// DeleteAccount deletes an account by ID
+func DeleteAccount(db *sql.DB, id int64) error {
+	query := "DELETE FROM accounts WHERE id = ?"
+
+	result, err := db.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete account: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("account with ID %d not found", id)
+	}
+
+	return nil
+}
+
+// GetTotalMonthlySpend calculates the total monthly spend across all active paid accounts
+func GetTotalMonthlySpend(db *sql.DB) (float64, error) {
+	query := `
+		SELECT COALESCE(SUM(price_monthly), 0)
+		FROM accounts
+		WHERE status = 'active' AND price_monthly > 0
+	`
+
+	var total float64
+	err := db.QueryRow(query).Scan(&total)
+	if err != nil {
+		return 0, fmt.Errorf("failed to calculate total spend: %w", err)
+	}
+
+	return total, nil
+}
+
+// scanAccounts is a helper function to scan rows into Account structs
+func scanAccounts(rows *sql.Rows) ([]Account, error) {
+	var accounts []Account
+
+	for rows.Next() {
+		var acc Account
+		var detectedAt, updatedAt int64
+		var trialEndUnix sql.NullInt64
+
+		err := rows.Scan(
+			&acc.ID,
+			&acc.ServiceName,
+			&acc.EmailAddress,
+			&acc.AccountType,
+			&acc.Status,
+			&acc.PriceMonthly,
+			&trialEndUnix,
+			&acc.GmailMessageID,
+			&detectedAt,
+			&updatedAt,
+			&acc.Confidence,
+			&acc.CancelURL,
+			&acc.Category,
+		)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan account: %w", err)
+		}
+
+		acc.DetectedAt = time.Unix(detectedAt, 0)
+		acc.UpdatedAt = time.Unix(updatedAt, 0)
+
+		if trialEndUnix.Valid {
+			t := time.Unix(trialEndUnix.Int64, 0)
+			acc.TrialEndDate = &t
+		}
+
+		accounts = append(accounts, acc)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating accounts: %w", err)
+	}
+
+	return accounts, nil
+}

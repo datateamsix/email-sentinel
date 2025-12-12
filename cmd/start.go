@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 	googlemail "google.golang.org/api/gmail/v1"
 
+	"github.com/datateamsix/email-sentinel/internal/accounts"
 	"github.com/datateamsix/email-sentinel/internal/ai"
 	"github.com/datateamsix/email-sentinel/internal/appconfig"
 	"github.com/datateamsix/email-sentinel/internal/config"
@@ -282,6 +284,9 @@ func runStart(cmd *cobra.Command, args []string) {
 				}
 			}
 
+			// Check for expiring trials and send alerts
+			checkExpiringTrials(db)
+
 			// Circuit breaker: implement exponential backoff on repeated failures
 			if failureCount > 0 && time.Since(lastFailureTime) < backoffDuration {
 				fmt.Printf("[%s] Backing off due to %d consecutive failures... waiting %v\n",
@@ -493,6 +498,9 @@ func processMessage(msg *googlemail.Message, cfg *filter.Config, db *sql.DB, pri
 	// Parse message
 	email := gmail.ParseMessage(msg)
 
+	// Detect digital accounts (subscriptions, trials, etc.) - runs on ALL emails
+	detectAndSaveAccount(email, db)
+
 	// Check against all filters (with metadata including labels)
 	matchedFilters, err := filter.CheckAllFiltersWithMetadata(email.From, email.Subject)
 	if err != nil {
@@ -631,4 +639,200 @@ func generateAISummaryAsync(aiService *ai.Service, alert storage.Alert) {
 			fmt.Printf("   🤖 AI: %s\n", summary.Summary)
 		}
 	}(alert)
+}
+
+// detectAndSaveAccount detects and saves digital account information from emails
+func detectAndSaveAccount(email *gmail.EmailMessage, db *sql.DB) {
+	// Load app config to get account settings
+	appCfg, err := appconfig.Load()
+	if err != nil || !appCfg.Accounts.Enabled {
+		// Silently skip if config not available or accounts disabled
+		return
+	}
+
+	// Load account configuration
+	accountCfg := accounts.LoadConfigFromAppConfig(appCfg)
+	if !accountCfg.Enabled {
+		return
+	}
+
+	// Create detector
+	detector := accounts.NewDetector(accountCfg.MinConfidence, accountCfg.Categories)
+
+	// Create detection context
+	ctx := accounts.DetectionContext{
+		Subject:      email.Subject,
+		Body:         "",          // Body not available in snippet API
+		Snippet:      email.Snippet,
+		Sender:       email.From,
+		ToEmail:      "",          // We'll try to extract this
+		ReceivedDate: time.Now(),  // Use current time as we don't have exact received date
+		MessageID:    email.ID,    // Use Gmail message ID
+	}
+
+	// Attempt to extract recipient email from snippet
+	if ctx.ToEmail == "" {
+		// Try to get from Gmail headers if available
+		ctx.ToEmail = extractRecipientFromEmail(email)
+	}
+
+	// Detect account
+	result, err := detector.DetectAccount(ctx)
+	if err != nil {
+		// Silent failure - don't spam logs for detection errors
+		return
+	}
+
+	if result == nil {
+		// No account detected - this is normal, not an error
+		return
+	}
+
+	// Convert to storage model
+	now := time.Now()
+	account := &storage.Account{
+		ServiceName:    result.ServiceName,
+		EmailAddress:   result.EmailAddress,
+		AccountType:    result.AccountType,
+		Status:         "active",
+		PriceMonthly:   result.PriceMonthly,
+		TrialEndDate:   result.TrialEndDate,
+		GmailMessageID: result.GmailMessageID,
+		DetectedAt:     now,
+		UpdatedAt:      now,
+		Confidence:     result.Confidence,
+		CancelURL:      result.CancelURL,
+		Category:       result.Category,
+	}
+
+	// Save to database
+	if err := storage.InsertAccount(db, account); err != nil {
+		// Only log if it's not a duplicate
+		if !strings.Contains(err.Error(), "UNIQUE") {
+			fmt.Printf("   ⚠️  Failed to save account: %v\n", err)
+		}
+		return
+	}
+
+	// Log successful detection
+	typeIcon := "💳"
+	if account.AccountType == "trial" {
+		typeIcon = "🆓"
+	} else if account.AccountType == "free" {
+		typeIcon = "🎁"
+	}
+
+	fmt.Printf("   %s ACCOUNT DETECTED: %s (%s) | Email: %s\n",
+		typeIcon,
+		account.ServiceName,
+		account.AccountType,
+		account.EmailAddress,
+	)
+
+	if account.TrialEndDate != nil {
+		daysUntil := time.Until(*account.TrialEndDate).Hours() / 24
+		if daysUntil > 0 {
+			fmt.Printf("      Trial expires in %d days\n", int(daysUntil)+1)
+		}
+	}
+
+	if account.PriceMonthly > 0 {
+		fmt.Printf("      Price: $%.2f/month\n", account.PriceMonthly)
+	}
+}
+
+// extractRecipientFromEmail attempts to extract the recipient email address
+func extractRecipientFromEmail(email *gmail.EmailMessage) string {
+	// Try to extract from snippet (look for "sent to:", "delivered to:", etc.)
+	text := email.Subject + " " + email.Snippet
+
+	// Common patterns
+	patterns := []string{
+		`(?i)sent to:?\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})`,
+		`(?i)delivered to:?\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})`,
+		`(?i)for:?\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})`,
+	}
+
+	for _, patternStr := range patterns {
+		if matches := regexp.MustCompile(patternStr).FindStringSubmatch(text); len(matches) > 1 {
+			return matches[1]
+		}
+	}
+
+	// If not found, return empty - will default to user's primary email
+	return ""
+}
+
+// checkExpiringTrials checks for expiring trials and sends alerts
+func checkExpiringTrials(db *sql.DB) {
+	// Load app config to get trial alert settings
+	appCfg, err := appconfig.Load()
+	if err != nil || !appCfg.Accounts.Enabled {
+		return
+	}
+
+	// Get all active trials
+	trials, err := storage.GetActiveTrials(db)
+	if err != nil {
+		// Silent failure - don't spam logs
+		return
+	}
+
+	// Check each trial against alert thresholds
+	for _, trial := range trials {
+		if trial.TrialEndDate == nil {
+			continue
+		}
+
+		daysUntil := time.Until(*trial.TrialEndDate).Hours() / 24
+
+		// Skip if already expired
+		if daysUntil < 0 {
+			continue
+		}
+
+		// Check against each alert threshold
+		for _, alert := range appCfg.Accounts.TrialAlerts {
+			if daysUntil <= float64(alert.DaysBefore) && daysUntil > float64(alert.DaysBefore-1) {
+				// Should send alert
+				sendTrialExpirationAlert(trial, alert.Urgency, int(daysUntil)+1)
+			}
+		}
+	}
+}
+
+// sendTrialExpirationAlert sends a notification for an expiring trial
+func sendTrialExpirationAlert(trial storage.Account, urgency string, daysUntil int) {
+	var title, message, icon string
+
+	switch urgency {
+	case "critical":
+		icon = "🔥"
+		title = "FINAL WARNING: Trial Expires Soon!"
+	case "high":
+		icon = "⚠️"
+		title = "Trial Expires Soon"
+	default:
+		icon = "📅"
+		title = "Trial Expiring"
+	}
+
+	if daysUntil == 1 {
+		message = fmt.Sprintf("%s %s trial expires tomorrow", icon, trial.ServiceName)
+	} else {
+		message = fmt.Sprintf("%s %s trial expires in %d days", icon, trial.ServiceName, daysUntil)
+	}
+
+	if trial.PriceMonthly > 0 {
+		message += fmt.Sprintf(" ($%.2f/month)", trial.PriceMonthly)
+	}
+
+	// Log to console
+	fmt.Printf("[%s] %s\n", time.Now().Format("15:04:05"), message)
+
+	// Send desktop notification
+	if err := notify.SendDesktopNotification(title, message); err != nil {
+		// Silent failure for notifications
+		return
+	}
 }

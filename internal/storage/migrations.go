@@ -79,6 +79,7 @@ func RunMigrations(db *sql.DB) error {
 	}{
 		{1, "Add OTP alerts table", Migration_001_AddOTPTable},
 		{2, "Add AI summaries table", Migration_002_AddAISummariesTable},
+		{3, "Add digital accounts table", Migration_003_AddAccountsTable},
 	}
 
 	// Run each pending migration
@@ -175,6 +176,54 @@ func Migration_002_AddAISummariesTable(tx *sql.Tx) error {
 
 	if _, err := tx.Exec(schema); err != nil {
 		return fmt.Errorf("failed to create ai_summaries table: %w", err)
+	}
+
+	return nil
+}
+
+// Migration_003_AddAccountsTable creates the accounts table for tracking digital accounts
+// Supports subscriptions, trials, and free accounts
+// This migration is idempotent - safe to run multiple times
+func Migration_003_AddAccountsTable(tx *sql.Tx) error {
+	schema := `
+		CREATE TABLE IF NOT EXISTS accounts (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			service_name TEXT NOT NULL,
+			email_address TEXT NOT NULL,
+			account_type TEXT,
+			status TEXT DEFAULT 'active',
+			price_monthly REAL,
+			trial_end_date INTEGER,
+			gmail_message_id TEXT,
+			detected_at INTEGER NOT NULL,
+			updated_at INTEGER NOT NULL,
+			confidence REAL DEFAULT 0.0,
+			cancel_url TEXT,
+			category TEXT
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_accounts_service ON accounts(service_name);
+		CREATE INDEX IF NOT EXISTS idx_accounts_email ON accounts(email_address);
+		CREATE INDEX IF NOT EXISTS idx_accounts_type ON accounts(account_type);
+		CREATE INDEX IF NOT EXISTS idx_accounts_status ON accounts(status);
+		CREATE INDEX IF NOT EXISTS idx_accounts_trial_end ON accounts(trial_end_date);
+		CREATE INDEX IF NOT EXISTS idx_accounts_detected ON accounts(detected_at DESC);
+
+		CREATE TABLE IF NOT EXISTS account_alerts (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			account_id INTEGER NOT NULL,
+			alert_type TEXT NOT NULL,
+			alert_date INTEGER NOT NULL,
+			sent_at INTEGER,
+			FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_account_alerts_account ON account_alerts(account_id);
+		CREATE INDEX IF NOT EXISTS idx_account_alerts_date ON account_alerts(alert_date);
+	`
+
+	if _, err := tx.Exec(schema); err != nil {
+		return fmt.Errorf("failed to create accounts tables: %w", err)
 	}
 
 	return nil

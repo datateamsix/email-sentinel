@@ -274,6 +274,93 @@ otp:
     clear_after: "30s"
 
 # ==============================================================================
+# DIGITAL ACCOUNTS TRACKING
+# ==============================================================================
+accounts:
+  # Enable automatic detection of digital accounts (subscriptions, trials, free accounts)
+  enabled: true
+
+  # Trial expiration alerts
+  # Alert N days before trial expires
+  trial_alerts:
+    - days_before: 3
+      urgency: "high"
+    - days_before: 1
+      urgency: "critical"
+
+  # Detection settings
+  detection:
+    # Minimum confidence score to save an account (0.0 - 1.0)
+    min_confidence: 0.7
+
+    # Auto-detect account type keywords
+    keywords:
+      trial:
+        - free trial
+        - trial period
+        - trial started
+        - trial membership
+        - start your trial
+        - trial expires
+        - trial ends
+
+      subscription:
+        - subscription renewed
+        - payment successful
+        - subscription confirmed
+        - monthly subscription
+        - annual subscription
+        - recurring payment
+        - auto-renew
+
+      account_created:
+        - welcome to
+        - account created
+        - verify your email
+        - confirm your account
+        - registration successful
+        - account activated
+
+      cancellation:
+        - subscription cancelled
+        - subscription canceled
+        - membership ended
+        - auto-renew disabled
+        - will not be charged
+
+  # Service categories (for organization)
+  categories:
+    streaming:
+      - Netflix
+      - Hulu
+      - Disney+
+      - Spotify
+      - Apple Music
+      - YouTube Premium
+
+    software:
+      - Adobe
+      - Microsoft 365
+      - GitHub
+      - Notion
+      - Grammarly
+      - Canva
+
+    cloud:
+      - AWS
+      - Google Cloud
+      - Dropbox
+      - iCloud
+      - OneDrive
+
+    productivity:
+      - ChatGPT
+      - Slack
+      - Zoom
+      - Asana
+      - Trello
+
+# ==============================================================================
 # NOTIFICATION SETTINGS
 # ==============================================================================
 notifications:
@@ -397,5 +484,34 @@ notifications:
 #     start: "22:00"
 #     end: "08:00"
 #     allow_urgent: true
+#
+# Example 7: Digital Accounts - Custom Trial Alert Schedule
+# accounts:
+#   trial_alerts:
+#     - days_before: 7
+#       urgency: "low"
+#     - days_before: 3
+#       urgency: "high"
+#     - days_before: 1
+#       urgency: "critical"
+#
+# Example 8: Digital Accounts - Add Custom Detection Keywords
+# accounts:
+#   detection:
+#     keywords:
+#       trial:
+#         - your trial begins
+#         - premium trial
+#       subscription:
+#         - membership fee
+#         - billing statement
+#
+# Example 9: Digital Accounts - View Commands
+# CLI Usage:
+#   email-sentinel accounts list              # Show all accounts
+#   email-sentinel accounts list --trials     # Show only trials
+#   email-sentinel accounts list --paid       # Show only paid accounts
+#   email-sentinel accounts search netflix    # Find specific service
+#   email-sentinel accounts refresh           # Re-scan Gmail
 #
 # ==============================================================================

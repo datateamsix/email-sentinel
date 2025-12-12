@@ -591,6 +591,168 @@ Source: text
 
 ---
 
+### Digital Accounts Management
+
+Track subscriptions, trials, and digital accounts automatically. Never lose money on forgotten trials.
+
+#### `email-sentinel accounts list`
+
+List all detected digital accounts.
+
+**Usage:**
+```bash
+# Show all accounts
+email-sentinel accounts list
+
+# Show only trial accounts
+email-sentinel accounts list --trials
+
+# Show only paid subscriptions
+email-sentinel accounts list --paid
+
+# Show only free accounts
+email-sentinel accounts list --free
+```
+
+**Example Output:**
+```
+📋 All Accounts (5 total)
+─────────────────────────────────────────────────────────────────
+
+[1] ✅ 🆓 Adobe Creative Cloud  🔥 Expires in 2 days  $54.99/mo
+    Email: work@gmail.com
+    Type: trial | Category: software
+    Detected: 5 days ago
+
+[2] ✅ 💳 Netflix Premium  $15.99/mo
+    Email: personal@gmail.com
+    Type: paid | Category: streaming
+    Detected: 30 days ago
+
+[3] ✅ 💳 Spotify Premium  $9.99/mo
+    Email: personal@gmail.com
+    Type: paid | Category: streaming
+    Detected: 45 days ago
+
+📊 Account Summary
+   Total accounts: 5 (5 active)
+   Trials: 2 (1 expiring soon)
+   Paid: 2
+   Free: 1
+   Emails used: 2
+
+💰 Total: $80.97/month ($971.64/year)
+```
+
+**Use Cases:**
+- See all your subscriptions in one place
+- Know which email you used for each service
+- Track total monthly/annual spending
+- Monitor active trials
+
+---
+
+#### `email-sentinel accounts search`
+
+Search for a specific service by name.
+
+**Usage:**
+```bash
+email-sentinel accounts search <service>
+```
+
+**Examples:**
+```bash
+# Find which email you used for Netflix
+email-sentinel accounts search netflix
+
+# Find Adobe accounts
+email-sentinel accounts search adobe
+
+# Find Spotify
+email-sentinel accounts search spotify
+```
+
+**Example Output:**
+```
+🔍 Search Results for 'netflix' (1 found)
+─────────────────────────────────────────────────────────────────
+
+[1] ✅ 💳 Netflix Premium  $15.99/mo
+    Email: personal@gmail.com
+    Type: paid | Category: streaming
+    Detected: 30 days ago
+
+✓ Netflix Premium is using: personal@gmail.com
+```
+
+**Use Cases:**
+- Quickly find which email you used for a service
+- Check if you have active subscriptions you forgot about
+- Verify account details before canceling
+
+---
+
+#### `email-sentinel accounts remove`
+
+Remove an account from tracking by its ID.
+
+**Usage:**
+```bash
+email-sentinel accounts remove <id>
+```
+
+**Example:**
+```bash
+# Remove account #3
+email-sentinel accounts remove 3
+```
+
+**Output:**
+```
+✓ Account #3 removed successfully
+```
+
+**Use Cases:**
+- Clean up cancelled subscriptions
+- Remove duplicate entries
+- Manage account database
+
+---
+
+**How It Works:**
+
+Email Sentinel automatically detects digital accounts from incoming emails:
+- **Trial Starts**: "Your 7-day free trial has started"
+- **Subscriptions**: "Payment of $9.99 processed"
+- **Account Creation**: "Welcome to Netflix Premium"
+- **Cancellations**: "Subscription has been cancelled"
+
+**Trial Expiration Alerts:**
+
+Get notified before trials auto-convert to paid:
+- 🔔 **3 days before**: High urgency warning
+- 🔥 **1 day before**: Critical final warning
+
+**Example Alert:**
+```
+🔥 FINAL WARNING: Adobe CC trial expires in 1 day ($54.99/month)
+   Email: work@gmail.com
+   Cancel: https://adobe.com/cancel
+```
+
+**Supported Services:**
+
+Email Sentinel detects accounts from:
+- **Streaming**: Netflix, Hulu, Disney+, Spotify, Apple Music, YouTube Premium
+- **Software**: Adobe, Microsoft 365, GitHub, Notion, Grammarly, Canva
+- **Cloud**: AWS, Google Cloud, Dropbox, iCloud, OneDrive
+- **Productivity**: ChatGPT, Slack, Zoom, Asana, Trello
+
+Plus generic detection for any service!
+
+---
+
 ### Testing
 
 #### `email-sentinel test desktop`
@@ -1444,6 +1606,11 @@ email-sentinel alerts --recent 10
 
 # OTP
 email-sentinel otp list --active
+
+# Digital Accounts (Subscriptions & Trials)
+email-sentinel accounts list
+email-sentinel accounts list --trials
+email-sentinel accounts search netflix
 email-sentinel otp get
 
 # Config

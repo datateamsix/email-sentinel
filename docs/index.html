@@ -824,7 +824,7 @@
     <!-- Sample Use Cases Section -->
     <section class="use-cases">
         <div class="container">
-            <h2 class="section-title">3 Sample Use Cases</h2>
+            <h2 class="section-title">5 Sample Use Cases</h2>
             <div class="use-case-grid">
                 <div class="use-case-card fade-in">
                     <span class="use-case-icon"><i class="fas fa-bullseye"></i></span>
@@ -851,6 +851,36 @@
   --from "noreply@github.com,google.com" \
   --subject "verification,code,2fa" \
   --labels "otp,security"</code></pre>
+                    </div>
+                </div>
+
+                <div class="use-case-card fade-in">
+                    <span class="use-case-icon"><i class="fas fa-credit-card"></i></span>
+                    <h3>Subscription Tracking</h3>
+                    <p>Never lose $30-50/month on forgotten trials. Email Sentinel auto-detects subscriptions and alerts you before trials expire. Always know which email you used for Netflix.</p>
+                    <div class="cli-example">
+<pre><code># No filter needed - automatic!
+email-sentinel start --tray
+
+# View all accounts & monthly spend
+email-sentinel accounts list
+
+# Find which email you used
+email-sentinel accounts search netflix</code></pre>
+                    </div>
+                </div>
+
+                <div class="use-case-card fade-in">
+                    <span class="use-case-icon"><i class="fas fa-university"></i></span>
+                    <h3>Banking & Fraud Alerts</h3>
+                    <p>Get instant notifications for fraud alerts, debit card usage, low balance warnings. Never miss critical banking activity.</p>
+                    <div class="cli-example">
+<pre><code>email-sentinel filter add \
+  --name "Bank of America" \
+  --from "alerts@bankofamerica.com" \
+  --subject "Debit Card,Fraud,Balance" \
+  --scope "inbox+updates" \
+  --labels "banking,urgent"</code></pre>
                     </div>
                 </div>
 
@@ -906,6 +936,22 @@
                     <div class="feature-content">
                         <h4>OTP Auto-Extract</h4>
                         <p>Instantly extract 2FA codes and copy to clipboard—no more hunting through emails</p>
+                    </div>
+                </div>
+
+                <div class="feature-item fade-in">
+                    <span class="feature-check"><i class="fas fa-check-circle"></i></span>
+                    <div class="feature-content">
+                        <h4>Digital Account Tracking</h4>
+                        <p>Auto-detect subscriptions & trials, track which email you used, never lose money on forgotten trials</p>
+                    </div>
+                </div>
+
+                <div class="feature-item fade-in">
+                    <span class="feature-check"><i class="fas fa-check-circle"></i></span>
+                    <div class="feature-content">
+                        <h4>Trial Expiration Alerts</h4>
+                        <p>Get notified 3 days and 1 day before trials expire—save $30-50/month on forgotten subscriptions</p>
                     </div>
                 </div>
 

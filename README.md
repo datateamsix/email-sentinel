@@ -20,9 +20,11 @@ Email notifications are blunt instruments. Email Sentinel is your simple, no-fri
 
 **The Solution**: Email Sentinel monitors Gmail silently in the background and sends **instant notifications** only for emails matching your specific filters. Work in peace, knowing you won't miss what matters.
 
-**5 Killer Use Cases:**
+**7 Killer Use Cases:**
 - 🎯 **Job Hunting** - Never miss interview invites or recruiter messages
 - 🔐 **OTP Codes** - Auto-extract 2FA codes, copy to clipboard instantly
+- 💳 **Subscription Tracking** - Never lose money on forgotten trials, track all subscriptions
+- 🏦 **Banking Alerts** - Instant fraud alerts, debit card usage, low balance warnings
 - 👔 **VIP Alerts** - Get notified the second your boss or key clients email
 - 🚨 **Spam Rescue** - Catch important emails misfiled in spam/promotions
 - ⚡ **Urgent Keywords** - Auto-detect "ASAP", "urgent", deadlines across all senders
@@ -36,6 +38,8 @@ Email notifications are blunt instruments. Email Sentinel is your simple, no-fri
 - 🔔 **Desktop + Mobile Notifications** (Windows/macOS/Linux + ntfy.sh)
 - 🤖 **AI Email Summaries** (optional, with Claude/GPT/Gemini)
 - 🔐 **OTP/2FA Code Extraction** (copy codes instantly)
+- 💳 **Digital Account Tracking** (subscriptions, trials, track which email you used)
+- 🔥 **Trial Expiration Alerts** (never lose money on forgotten free trials)
 - 📊 **Alert History** with Gmail links
 - 🪟 **System Tray App** (runs in background)
 - 📱 **Gmail Category Scopes** (inbox, social, promotions, etc.)
@@ -142,7 +146,7 @@ Choose your platform for step-by-step setup:
 
 ---
 
-## 🎯 Top 5 Use Cases
+## 🎯 Top Use Cases
 
 ### 1. 🎯 Job Hunting & Recruiter Alerts
 
@@ -338,8 +342,117 @@ priority:
 - Deadline reminders
 - Emergency notifications
 - Payment due notices
-- Time-sensitive requests
-- Critical updates
+
+---
+
+### 6. 💳 Subscription & Trial Tracking
+
+**The Problem:** Lose $30-50/month on forgotten trials that auto-convert to paid subscriptions. Don't know which email you used for Netflix or Spotify.
+
+**The Solution:** Email Sentinel automatically detects subscriptions, trials, and account creations. Track which email you used, get alerts before trials expire.
+
+```bash
+# Email Sentinel automatically detects subscriptions from ANY emails
+# No filter needed - just start monitoring!
+email-sentinel start --tray
+
+# View all your accounts
+email-sentinel accounts list
+
+# Find which email you used for Netflix
+email-sentinel accounts search netflix
+
+# See only active trials
+email-sentinel accounts list --trials
+
+# Check total monthly spend
+email-sentinel accounts list
+```
+
+**Features:**
+- 🔍 **Auto-Detection** - Finds subscriptions, trials, and account creations automatically
+- 📧 **Email Tracking** - Always know which email you used for each service
+- 🔥 **Trial Alerts** - Get notified 3 days and 1 day before trial expires
+- 💰 **Cost Tracking** - See total monthly/annual spend across all subscriptions
+- 🔎 **Quick Search** - `email-sentinel accounts search <service>` instantly shows your email
+
+**What you'll catch:**
+- Netflix, Hulu, Disney+, Spotify trials
+- Adobe Creative Cloud, Microsoft 365, GitHub Copilot
+- Cloud services (AWS, Dropbox, iCloud)
+- SaaS tools (Notion, Grammarly, Canva, ChatGPT)
+
+**Alert Example:**
+```
+🔥 FINAL WARNING: Adobe CC trial expires in 1 day ($54.99/month)
+   Email: work@gmail.com
+   Cancel: https://adobe.com/cancel
+```
+
+---
+
+### 7. 🏦 Banking & Fraud Alerts
+
+**The Problem:** Miss critical fraud alerts, debit card usage notifications, or low balance warnings from your bank.
+
+**The Solution:** Get instant notifications for all banking activity - fraud attempts, card usage, withdrawals, deposits.
+
+```bash
+# Bank of America alerts
+email-sentinel filter add \
+  --name "Bank of America Alerts" \
+  --from "alerts@bankofamerica.com,ealerts@ealerts.bankofamerica.com" \
+  --subject "Debit Card Used,Transaction Alert,Low Balance,Fraud Alert,Security Alert" \
+  --scope "inbox+updates" \
+  --labels "banking,urgent,security"
+
+# Chase Bank alerts
+email-sentinel filter add \
+  --name "Chase Banking" \
+  --from "no-reply@alertsp.chase.com,chase.com" \
+  --subject "transaction,alert,balance,fraud,security" \
+  --scope "inbox+updates" \
+  --labels "banking,urgent"
+
+# Wells Fargo alerts
+email-sentinel filter add \
+  --name "Wells Fargo Alerts" \
+  --from "wellsfargo.com" \
+  --subject "alert,transaction,balance,fraud,security" \
+  --scope "inbox+updates" \
+  --labels "banking,urgent"
+
+# Credit card fraud alerts (multiple issuers)
+email-sentinel filter add \
+  --name "Credit Card Fraud" \
+  --from "alerts@" \
+  --subject "fraud,suspicious,unusual activity,security alert,card blocked" \
+  --scope "inbox+updates+spam" \
+  --labels "banking,fraud,critical"
+```
+
+**What you'll catch:**
+- ⚠️ **Fraud Alerts** - Suspicious transactions, card blocked, unusual activity
+- 💳 **Debit Card Usage** - Every time your card is used (optional per bank)
+- 💰 **Low Balance Warnings** - Avoid overdraft fees
+- 🏧 **ATM Withdrawals** - Know when cash is withdrawn from your account
+- 📊 **Large Transactions** - Get notified for purchases over $X
+- 🔒 **Security Alerts** - Login attempts, password changes, new devices
+
+**Pro Tip:** Banking alerts often go to Updates or even Spam. Use `--scope "inbox+updates+spam"` to catch everything.
+
+**Real Example - Bank of America:**
+```
+📧 Subject: Debit Card Used - $47.23 at Amazon.com
+From: ealerts@ealerts.bankofamerica.com
+Time: 2 seconds ago
+```
+
+**Safety First:**
+- ✅ All filtering happens locally on your device
+- ✅ Email Sentinel never stores banking details
+- ✅ OAuth tokens encrypted with AES-256
+- ✅ No third-party access to your email
 
 ---
 

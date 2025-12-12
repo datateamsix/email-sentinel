@@ -14,6 +14,7 @@ type AppConfig struct {
 	AISummary     AISummaryConfig     `yaml:"ai_summary"`
 	Priority      PriorityConfig      `yaml:"priority"`
 	OTP           OTPConfig           `yaml:"otp"`
+	Accounts      AccountsConfig      `yaml:"accounts"`
 	Notifications NotificationsConfig `yaml:"notifications"`
 }
 
@@ -133,6 +134,30 @@ type CustomPattern struct {
 type ClipboardConfig struct {
 	AutoCopy   bool   `yaml:"auto_copy"`
 	ClearAfter string `yaml:"clear_after"` // duration string like "30s"
+}
+
+// ==============================================================================
+// Digital Accounts Configuration
+// ==============================================================================
+
+// AccountsConfig holds digital account tracking settings
+type AccountsConfig struct {
+	Enabled      bool                       `yaml:"enabled"`
+	TrialAlerts  []TrialAlert               `yaml:"trial_alerts"`
+	Detection    AccountDetectionConfig     `yaml:"detection"`
+	Categories   map[string][]string        `yaml:"categories"`
+}
+
+// TrialAlert defines when to alert before trial expiration
+type TrialAlert struct {
+	DaysBefore int    `yaml:"days_before"`
+	Urgency    string `yaml:"urgency"` // "low", "high", "critical"
+}
+
+// AccountDetectionConfig controls account detection behavior
+type AccountDetectionConfig struct {
+	MinConfidence float64                `yaml:"min_confidence"`
+	Keywords      map[string][]string    `yaml:"keywords"`
 }
 
 // ==============================================================================

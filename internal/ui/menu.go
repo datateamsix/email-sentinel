@@ -155,6 +155,11 @@ func (m *Menu) Run() {
 func (m *Menu) render() {
 	width := DefaultMenuConfig.Width
 
+	// Show banner for main menu only (when no parent)
+	if m.Parent == nil && m.Title == "Main Menu" {
+		PrintMenuBanner()
+	}
+
 	// Top border
 	fmt.Println(ColorCyan.Sprint("╔" + strings.Repeat("═", width-2) + "╗"))
 
@@ -352,11 +357,15 @@ func BuildMainMenu() *Menu {
 	statusMenu := buildStatusMenu()
 	menu.AddSubMenu("4", "📊", "Status & History", "View alerts and status", statusMenu)
 
+	// Digital Accounts submenu
+	accountsMenu := buildAccountsMenu()
+	menu.AddSubMenu("5", "💳", "Digital Accounts", "Manage subscriptions & trials", accountsMenu)
+
 	// Settings submenu
 	settingsMenu := buildSettingsMenu()
-	menu.AddSubMenu("5", "⚙️", "Settings", "Configure app settings", settingsMenu)
+	menu.AddSubMenu("6", "⚙️", "Settings", "Configure app settings", settingsMenu)
 
-	menu.AddItem("6", "🔧", "Setup Wizard", "Re-run initial setup", func() error {
+	menu.AddItem("7", "🔧", "Setup Wizard", "Re-run initial setup", func() error {
 		ClearScreen()
 		wizard := NewWizard()
 		return wizard.Run()
@@ -376,16 +385,11 @@ func buildFilterMenu() *Menu {
 	menu := NewMenu("Filter Management")
 
 	menu.AddItem("1", "➕", "Add Filter", "Create a new filter", func() error {
-		PrintSection("Add New Filter")
-		PrintInfo("Creating a new email filter...")
-		// Placeholder for actual filter add logic
-		return nil
+		return handleAddFilter()
 	})
 
 	menu.AddItem("2", "✏️", "Edit Filter", "Modify existing filter", func() error {
-		PrintSection("Edit Filter")
-		PrintInfo("Editing filter...")
-		return nil
+		return handleEditFilter()
 	})
 
 	menu.AddItem("3", "🗑️", "Remove Filter", "Delete a filter", func() error {
@@ -393,16 +397,61 @@ func buildFilterMenu() *Menu {
 	})
 
 	menu.AddItem("4", "📋", "List Filters", "View all filters", func() error {
-		PrintSection("Filter List")
+		return handleListFilters()
+	})
 
-		headers := []string{"Name", "From", "Subject", "Labels"}
-		rows := [][]string{
-			{"Job Alerts", "linkedin.com", "interview", "work,career"},
-			{"Boss", "boss@company.com", "(any)", "work,urgent"},
-			{"Client", "client@example.com", "invoice", "work,billing"},
+	return menu
+}
+
+// buildAccountsMenu creates the digital accounts submenu
+func buildAccountsMenu() *Menu {
+	menu := NewMenu("Digital Accounts")
+
+	menu.AddItem("1", "📋", "List All Accounts", "View all subscriptions & trials", func() error {
+		PrintSection("Digital Accounts")
+		PrintInfo("Launching accounts list...")
+		fmt.Println()
+		PrintInfo("Run: email-sentinel accounts list")
+		PrintInfo("Or:  email-sentinel accounts list --trials (show only trials)")
+		PrintInfo("Or:  email-sentinel accounts list --paid (show only paid)")
+		return nil
+	})
+
+	menu.AddItem("2", "🔍", "Search Account", "Find which email you used for a service", func() error {
+		PrintSection("Search Account")
+		reader := bufio.NewReader(os.Stdin)
+
+		fmt.Println()
+		ColorGreen.Print("Service name (e.g., Netflix, Spotify): ")
+		service, _ := reader.ReadString('\n')
+		service = strings.TrimSpace(service)
+
+		if service == "" {
+			PrintError("Service name is required")
+			return fmt.Errorf("service name required")
 		}
-		PrintTable(headers, rows)
 
+		fmt.Println()
+		PrintInfo(fmt.Sprintf("Searching for '%s'...", service))
+		PrintInfo("Run: email-sentinel accounts search " + service)
+		return nil
+	})
+
+	menu.AddItem("3", "🔥", "Expiring Trials", "View trials expiring soon", func() error {
+		PrintSection("Expiring Trials")
+		PrintInfo("Showing trials expiring in the next 7 days...")
+		fmt.Println()
+		PrintInfo("Run: email-sentinel accounts list --trials")
+		PrintWarning("Remember to cancel before trial expires to avoid charges!")
+		return nil
+	})
+
+	menu.AddItem("4", "💰", "Total Spending", "Calculate monthly/annual costs", func() error {
+		PrintSection("Total Spending")
+		PrintInfo("Calculating total subscription costs...")
+		fmt.Println()
+		PrintInfo("Run: email-sentinel accounts list")
+		PrintInfo("Total spending is shown at the bottom of the list")
 		return nil
 	})
 
@@ -501,6 +550,269 @@ func buildSettingsMenu() *Menu {
 	return menu
 }
 
+// handleAddFilter handles the interactive filter addition process
+func handleAddFilter() error {
+	PrintSection("Add New Email Filter")
+	reader := bufio.NewReader(os.Stdin)
+
+	// Get filter name
+	fmt.Print("\nFilter name: ")
+	filterName, _ := reader.ReadString('\n')
+	filterName = strings.TrimSpace(filterName)
+
+	if filterName == "" {
+		PrintError("Filter name is required")
+		return fmt.Errorf("filter name is required")
+	}
+
+	// Get from patterns
+	fmt.Println("\n📤 Sender Filter (From)")
+	fmt.Println("   Match emails from specific senders.")
+	fmt.Println("   Examples: boss@company.com, @linkedin.com, greenhouse.io")
+	fmt.Print("\nFrom contains (comma-separated, or blank to skip): ")
+	filterFrom, _ := reader.ReadString('\n')
+	filterFrom = strings.TrimSpace(filterFrom)
+
+	// Get subject patterns
+	fmt.Println("\n📝 Subject Filter")
+	fmt.Println("   Match emails with specific words in subject line.")
+	fmt.Println("   Examples: interview, urgent, invoice")
+	fmt.Print("\nSubject contains (comma-separated, or blank to skip): ")
+	filterSubject, _ := reader.ReadString('\n')
+	filterSubject = strings.TrimSpace(filterSubject)
+
+	// Validate at least one pattern
+	if filterFrom == "" && filterSubject == "" {
+		PrintError("At least one 'from' or 'subject' pattern is required")
+		return fmt.Errorf("at least one pattern required")
+	}
+
+	// Parse CSV
+	fromPatterns := parseCSV(filterFrom)
+	subjectPatterns := parseCSV(filterSubject)
+
+	// Get match mode if both patterns specified
+	filterMatch := "any"
+	if len(fromPatterns) > 0 && len(subjectPatterns) > 0 {
+		fmt.Println("\n🔀 Match Mode")
+		fmt.Println("   ANY (OR): Notify if sender OR subject matches (broader)")
+		fmt.Println("   ALL (AND): Notify only if sender AND subject match (precise)")
+		fmt.Print("\nMatch mode [any/all] (default: any): ")
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(strings.ToLower(input))
+		if input == "all" || input == "and" {
+			filterMatch = "all"
+		}
+	}
+
+	// Get labels
+	fmt.Println("\n🏷️  Labels/Categories (Optional)")
+	fmt.Println("   Organize filters (e.g., work, personal, urgent)")
+	fmt.Print("\nLabels (comma-separated, or blank to skip): ")
+	filterLabels, _ := reader.ReadString('\n')
+	filterLabels = strings.TrimSpace(filterLabels)
+	labelsList := parseCSV(filterLabels)
+
+	// Get Gmail scope
+	filterScope := "inbox"
+	fmt.Println("\n📧 Gmail Scope (Optional)")
+	fmt.Println("   Options: inbox (default), all, primary, social, promotions, updates")
+	fmt.Print("\nScope (or blank for inbox): ")
+	scopeInput, _ := reader.ReadString('\n')
+	scopeInput = strings.TrimSpace(scopeInput)
+	if scopeInput != "" {
+		filterScope = scopeInput
+	}
+
+	// Create filter
+	newFilter := filter.Filter{
+		Name:       filterName,
+		From:       fromPatterns,
+		Subject:    subjectPatterns,
+		Match:      filterMatch,
+		Labels:     labelsList,
+		GmailScope: filterScope,
+	}
+
+	// Add filter
+	if err := filter.AddFilter(newFilter); err != nil {
+		PrintError(fmt.Sprintf("Error: %v", err))
+		return err
+	}
+
+	fmt.Println()
+	PrintSuccess(fmt.Sprintf("Filter '%s' added successfully!", filterName))
+	return nil
+}
+
+// handleEditFilter handles the interactive filter editing process
+func handleEditFilter() error {
+	PrintSection("Edit Filter")
+	reader := bufio.NewReader(os.Stdin)
+
+	// Load all filters
+	filters, err := filter.ListFilters()
+	if err != nil {
+		PrintError(fmt.Sprintf("Error loading filters: %v", err))
+		return err
+	}
+
+	if len(filters) == 0 {
+		fmt.Println()
+		PrintInfo("No filters to edit")
+		return nil
+	}
+
+	// Display filters
+	fmt.Println()
+	PrintInfo("Select a filter to edit:")
+	fmt.Println()
+
+	for i, f := range filters {
+		fmt.Printf("  [%d] %s\n", i+1, f.Name)
+	}
+
+	// Get selection
+	fmt.Println()
+	ColorGreen.Print("Enter number: ")
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(input)
+
+	num, err := strconv.Atoi(input)
+	if err != nil || num < 1 || num > len(filters) {
+		PrintError("Invalid selection")
+		return fmt.Errorf("invalid selection")
+	}
+
+	filterIndex := num - 1
+	selectedFilter := filters[filterIndex]
+	fmt.Printf("\nEditing filter: %s\n", ColorBold.Sprint(selectedFilter.Name))
+	fmt.Println("\n(Press Enter to keep current value)")
+
+	// Edit from patterns
+	fmt.Printf("\nFrom [%s]: ", strings.Join(selectedFilter.From, ", "))
+	fromInput, _ := reader.ReadString('\n')
+	fromInput = strings.TrimSpace(fromInput)
+	if fromInput != "" {
+		selectedFilter.From = parseCSV(fromInput)
+	}
+
+	// Edit subject patterns
+	fmt.Printf("Subject [%s]: ", strings.Join(selectedFilter.Subject, ", "))
+	subjectInput, _ := reader.ReadString('\n')
+	subjectInput = strings.TrimSpace(subjectInput)
+	if subjectInput != "" {
+		selectedFilter.Subject = parseCSV(subjectInput)
+	}
+
+	// Validate at least one pattern
+	if len(selectedFilter.From) == 0 && len(selectedFilter.Subject) == 0 {
+		PrintError("At least one 'from' or 'subject' pattern is required")
+		return fmt.Errorf("at least one pattern required")
+	}
+
+	// Edit match mode
+	fmt.Printf("Match mode [%s]: ", selectedFilter.Match)
+	matchInput, _ := reader.ReadString('\n')
+	matchInput = strings.TrimSpace(strings.ToLower(matchInput))
+	if matchInput != "" {
+		if matchInput == "all" || matchInput == "and" {
+			selectedFilter.Match = "all"
+		} else {
+			selectedFilter.Match = "any"
+		}
+	}
+
+	// Edit labels
+	fmt.Printf("Labels [%s]: ", strings.Join(selectedFilter.Labels, ", "))
+	labelsInput, _ := reader.ReadString('\n')
+	labelsInput = strings.TrimSpace(labelsInput)
+	if labelsInput != "" {
+		selectedFilter.Labels = parseCSV(labelsInput)
+	}
+
+	// Edit scope
+	fmt.Printf("Gmail scope [%s]: ", selectedFilter.GmailScope)
+	scopeInput, _ := reader.ReadString('\n')
+	scopeInput = strings.TrimSpace(scopeInput)
+	if scopeInput != "" {
+		selectedFilter.GmailScope = scopeInput
+	}
+
+	// Update filter using index
+	if err := filter.UpdateFilter(filterIndex, selectedFilter); err != nil {
+		PrintError(fmt.Sprintf("Error: %v", err))
+		return err
+	}
+
+	fmt.Println()
+	PrintSuccess(fmt.Sprintf("Filter '%s' updated successfully!", selectedFilter.Name))
+	return nil
+}
+
+// handleListFilters displays all configured filters
+func handleListFilters() error {
+	PrintSection("Filter List")
+
+	// Load all filters
+	filters, err := filter.ListFilters()
+	if err != nil {
+		PrintError(fmt.Sprintf("Error loading filters: %v", err))
+		return err
+	}
+
+	if len(filters) == 0 {
+		fmt.Println()
+		PrintInfo("No filters configured yet")
+		fmt.Println()
+		PrintInfo("Use 'Add Filter' to create your first filter")
+		return nil
+	}
+
+	// Display filters
+	fmt.Printf("\n📋 Found %d filter(s):\n\n", len(filters))
+
+	for i, f := range filters {
+		fmt.Printf("[%d] %s\n", i+1, ColorBold.Sprint(f.Name))
+
+		// From patterns
+		if len(f.From) > 0 {
+			fmt.Printf("    From:    %s\n", strings.Join(f.From, ", "))
+		} else {
+			fmt.Printf("    From:    %s\n", ColorDim.Sprint("(any)"))
+		}
+
+		// Subject patterns
+		if len(f.Subject) > 0 {
+			fmt.Printf("    Subject: %s\n", strings.Join(f.Subject, ", "))
+		} else {
+			fmt.Printf("    Subject: %s\n", ColorDim.Sprint("(any)"))
+		}
+
+		// Match mode
+		fmt.Printf("    Match:   %s\n", f.Match)
+
+		// Labels
+		if len(f.Labels) > 0 {
+			fmt.Printf("    Labels:  %s\n", ColorCyan.Sprint(strings.Join(f.Labels, ", ")))
+		}
+
+		// Gmail scope
+		if f.GmailScope != "" && f.GmailScope != "inbox" {
+			fmt.Printf("    Scope:   %s\n", f.GmailScope)
+		}
+
+		// Expiration
+		if f.ExpiresAt != nil {
+			fmt.Printf("    Expires: %s\n", f.ExpiresAt.Format("2006-01-02"))
+		}
+
+		fmt.Println()
+	}
+
+	return nil
+}
+
 // handleRemoveFilter handles the interactive filter removal process
 func handleRemoveFilter() error {
 	PrintSection("Remove Filter")
@@ -566,9 +878,6 @@ func handleRemoveFilter() error {
 
 // RunInteractiveMenu starts the main interactive menu
 func RunInteractiveMenu() {
-	ClearScreen()
-	PrintBanner(AppVersion)
-
 	menu := BuildMainMenu()
 	menu.Run()
 }

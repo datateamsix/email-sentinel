@@ -40,15 +40,26 @@ New in this version:
   • System tray app - Background mode with tray icon showing recent alerts
   • Direct Gmail links - Click any alert to open email in browser
 
-Quick Start:
+Quick Start (Typical User):
   1. email-sentinel init                    # Authenticate with Gmail
   2. email-sentinel filter add              # Create your first filter
   3. email-sentinel test desktop            # Test notifications
-  4. email-sentinel start --tray            # Start monitoring with tray icon
-  5. email-sentinel alerts                  # View alert history
+  4. email-sentinel start --tray            # Start background monitoring (recommended!)
+  5. email-sentinel install                 # Auto-start on boot (optional)
 
-Interactive Mode:
-  Run 'email-sentinel' without arguments to open the interactive menu.
+Interactive Management:
+  email-sentinel                            # Open interactive menu for setup/management
+  email-sentinel menu                       # Explicit menu launch (same as above)
+
+CLI Power User:
+  email-sentinel filter add --name "X"      # Add filter via flags
+  email-sentinel accounts list --trials     # View expiring subscriptions
+  email-sentinel otp get                    # Get latest OTP code
+
+Modes Explained:
+  • Interactive Menu: Guided UI for managing filters and settings
+  • Start --tray: Background monitoring with system tray icon (typical usage)
+  • CLI Commands: Direct command execution for power users
 
 More Info: https://github.com/datateamsix/email-sentinel`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -83,9 +94,8 @@ func init() {
 
 // runInteractive launches the interactive menu system
 func runInteractive() {
-	// Clear screen and show banner
+	// Clear screen (logo and banner will be shown by menu render function)
 	ui.ClearScreen()
-	ui.PrintBanner(ui.AppVersion)
 
 	// Check if first-time setup needed
 	if ui.ShouldRunWizard() {

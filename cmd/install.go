@@ -120,7 +120,7 @@ func installWindows(exePath string, showOnly bool) {
   <Actions>
     <Exec>
       <Command>%s</Command>
-      <Arguments>start</Arguments>
+      <Arguments>start --tray</Arguments>
     </Exec>
   </Actions>
 </Task>`, exePath)
@@ -130,7 +130,7 @@ func installWindows(exePath string, showOnly bool) {
 		fmt.Println("")
 		fmt.Println("1. Task Scheduler task will be created:")
 		fmt.Printf("   Name: %s\n", taskName)
-		fmt.Printf("   Executable: %s start\n", exePath)
+		fmt.Printf("   Executable: %s start --tray\n", exePath)
 		fmt.Println("   Trigger: At logon")
 		fmt.Println("")
 		fmt.Println("2. Command that would be run:")
@@ -197,6 +197,7 @@ func installMacOS(exePath string, showOnly bool) {
     <array>
         <string>%s</string>
         <string>start</string>
+        <string>--tray</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
@@ -280,7 +281,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=%s start
+ExecStart=%s start --tray
 Restart=on-failure
 RestartSec=10
 

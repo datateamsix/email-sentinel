@@ -75,16 +75,36 @@ func onReady() {
 	mRecentAlerts = systray.AddMenuItem("📬 Recent Alerts", "View recent email alerts")
 	systray.AddSeparator()
 
-	// Nested "Manage Alerts" menu
+	// Nested "Manage Filters" menu
 	mManageAlerts = systray.AddMenuItem("⚙️ Manage Filters", "Add, edit, or remove email filters")
 	mAddFilter = mManageAlerts.AddSubMenuItem("➕ Add Filter", "Create a new email filter")
 	mEditFilter = mManageAlerts.AddSubMenuItem("✏️ Edit Filter", "Modify an existing filter")
+	systray.AddSeparator()
+
+	// Digital Accounts menu
+	mAccounts := systray.AddMenuItem("💳 Digital Accounts", "Manage subscriptions & trials")
+	mAccountsList := mAccounts.AddSubMenuItem("📋 List All", "View all subscriptions")
+	mAccountsTrials := mAccounts.AddSubMenuItem("🔥 Expiring Trials", "View trials expiring soon")
 	systray.AddSeparator()
 
 	mClearAlerts = systray.AddMenuItem("🗑️ Clear Alerts", "Delete all alerts from history")
 	mOpenHistory = systray.AddMenuItem("📊 Open History", "View all alerts and commands in terminal")
 	systray.AddSeparator()
 	mQuit = systray.AddMenuItem("❌ Quit", "Quit Email Sentinel")
+
+	// Handle accounts menu clicks
+	go func() {
+		for {
+			select {
+			case <-mAccountsList.ClickedCh:
+				openTerminalWithCommand("email-sentinel", "accounts", "list")
+			case <-mAccountsTrials.ClickedCh:
+				openTerminalWithCommand("email-sentinel", "accounts", "list", "--trials")
+			case <-globalApp.quitChan:
+				return
+			}
+		}
+	}()
 
 	// Load initial alerts
 	go globalApp.loadRecentAlerts()

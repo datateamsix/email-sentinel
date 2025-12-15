@@ -115,6 +115,82 @@ func PrintSimpleBanner(version string) {
 	fmt.Printf(" v%s\n", version)
 }
 
+// PrintMenuBanner displays a simple banner for the main menu (Sublist3r style)
+func PrintMenuBanner() {
+	fmt.Println()
+
+	// Simple box with app name and version
+	ColorCyan.Println("    ┌─────────────────────────────────────────┐")
+	ColorCyan.Print("    │                                         │\n")
+	ColorCyan.Print("    │         ")
+	ColorBold.Print("Email Sentinel")
+	ColorCyan.Print("                 │\n")
+	ColorCyan.Print("    │              ")
+	ColorDim.Print(AppVersion)
+	ColorCyan.Print("                      │\n")
+	ColorCyan.Print("    │                                         │\n")
+	ColorCyan.Println("    └─────────────────────────────────────────┘")
+
+	fmt.Println()
+}
+
+// PrintCompactLogoHeader shows compact logo + app name for command headers
+func PrintCompactLogoHeader() {
+	fmt.Println(ColorCyan.Sprint("    🌙"))
+	fmt.Println(ColorBold.Sprint("    📧 Email Sentinel"))
+	fmt.Println(ColorDim.Sprint("    Real-time Gmail Monitoring"))
+	fmt.Println()
+}
+
+// PrintCommandHeader shows a branded header for any command
+func PrintCommandHeader(commandName, description string) {
+	ClearScreen()
+
+	// Calculate padding for proper alignment (total width 60)
+	totalWidth := 60
+	headerText := fmt.Sprintf("  📧 Email Sentinel - %s", commandName)
+	headerLen := len(headerText)
+	headerPadding := totalWidth - headerLen - 2
+
+	if headerPadding < 0 {
+		headerPadding = 0
+	}
+
+	// Top border
+	fmt.Println(ColorCyan.Sprint(strings.Repeat("─", totalWidth)))
+
+	// Header line
+	fmt.Printf("%s%s%s%s\n",
+		ColorCyan.Sprint("│"),
+		ColorBold.Sprint(headerText),
+		strings.Repeat(" ", headerPadding),
+		ColorCyan.Sprint("│"))
+
+	// Middle border
+	fmt.Println(ColorCyan.Sprint(strings.Repeat("─", totalWidth)))
+
+	// Description line (if provided)
+	if description != "" {
+		descText := fmt.Sprintf("  %s", description)
+		descLen := len(descText)
+		descPadding := totalWidth - descLen - 2
+
+		if descPadding < 0 {
+			descPadding = 0
+		}
+
+		fmt.Printf("%s%s%s%s\n",
+			ColorCyan.Sprint("│"),
+			descText,
+			strings.Repeat(" ", descPadding),
+			ColorCyan.Sprint("│"))
+
+		fmt.Println(ColorCyan.Sprint(strings.Repeat("─", totalWidth)))
+	}
+
+	fmt.Println()
+}
+
 // PrintSection displays a section header
 // Example: ════════════ FILTER MANAGEMENT ════════════
 func PrintSection(title string) {

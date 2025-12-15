@@ -803,28 +803,20 @@
         </div>
     </header>
 
-    <!-- Demo Video Section -->
-    <section class="demo-video">
+    <!-- OTP Demo Image -->
+    <section class="otp-demo">
         <div class="container">
-            <h2 class="section-title">See It In Action</h2>
-            <div class="video-container">
-                <!-- Placeholder for demo video -->
-                <div class="video-placeholder">
-                    <div class="play-icon">▶️</div>
-                    <p>2-Minute Demo Video</p>
-                    <small>Coming Soon: Watch Email Sentinel in action</small>
-                </div>
-                <!-- Replace with actual video embed:
-                <iframe width="100%" height="500" src="https://www.youtube.com/embed/YOUR_VIDEO_ID" frameborder="0" allowfullscreen></iframe>
-                -->
-            </div>
+            <h2>Real-Time, Actionable Alerts</h2>
+            <p class="otp-demo-description">Copy timely codes and click into the messages directly to respond. Email Sentinel serves desktop and mobile notifications.</p>
+            <img src="./images/otp-toast.png" alt="OTP Auto-Extract Demo" class="otp-demo-image">
+            <p class="image-caption">Windows Toast Notification</p>
         </div>
     </section>
 
     <!-- Sample Use Cases Section -->
     <section class="use-cases">
         <div class="container">
-            <h2 class="section-title">5 Sample Use Cases</h2>
+            <h2 class="section-title">6 Sample Use Cases</h2>
             <div class="use-case-grid">
                 <div class="use-case-card fade-in">
                     <span class="use-case-icon"><i class="fas fa-bullseye"></i></span>
@@ -896,17 +888,20 @@ email-sentinel accounts search netflix</code></pre>
   --labels "work,vip,urgent"</code></pre>
                     </div>
                 </div>
-            </div>
-        </div>
-    </section>
 
-    <!-- OTP Demo Image -->
-    <section class="otp-demo">
-        <div class="container">
-            <h2>Real-Time, Actionable Alerts</h2>
-            <p class="otp-demo-description">Copy timely codes and click into the messages directly to respond. Email Sentinel serves desktop and mobile notifications.</p>
-            <img src="./images/otp-toast.png" alt="OTP Auto-Extract Demo" class="otp-demo-image">
-            <p class="image-caption">Windows Toast Notification</p>
+                <div class="use-case-card fade-in">
+                    <span class="use-case-icon"><i class="fas fa-shield-alt"></i></span>
+                    <h3>Spam Rescue</h3>
+                    <p>Important emails from freelancers, contractors, or small businesses often get misfiled in spam or promotions. Monitor all folders to catch what Gmail misses.</p>
+                    <div class="cli-example">
+<pre><code>email-sentinel filter add \
+  --name "Spam Rescue" \
+  --from "contractor@startup.com,freelancer@" \
+  --scope "all-except-trash" \
+  --labels "spam-rescue,important"</code></pre>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
